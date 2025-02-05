@@ -1,0 +1,234 @@
+---
+title: "The Bank Account Balances of Loan Clients from different Genders and Marital Status"
+author: " You name"
+date: " "
+output:
+  html_document: 
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+    number_sections: yes
+    toc_collapsed: yes
+    code_folding: hide
+    code_download: yes
+    smooth_scroll: yes
+    theme: lumen
+  word_document: 
+    toc: yes
+    toc_depth: 4
+    fig_caption: yes
+    keep_md: yes
+  pdf_document: 
+    toc: yes
+    toc_depth: 4
+    fig_caption: yes
+    number_sections: no
+    fig_width: 3
+    fig_height: 3
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{=html}
+
+<style type="text/css">
+
+/* Cascading Style Sheets (CSS) is a stylesheet language used to describe the presentation of a document written in HTML or XML. it is a simple mechanism for adding style (e.g., fonts, colors, spacing) to Web documents. */
+
+h1.title {  /* Title - font specifications of the report title */
+  font-size: 22px;
+  font-weight: bold;
+  color: DarkRed;
+  text-align: center;
+  font-family: "Gill Sans", sans-serif;
+}
+h4.author { /* Header 4 - font specifications for authors  */
+  font-size: 18px;
+  font-weight: bold;
+  font-family: system-ui;
+  color: navy;
+  text-align: center;
+}
+h4.date { /* Header 4 - font specifications for the date  */
+  font-size: 18px;
+  font-family: system-ui;
+  color: DarkBlue;
+  text-align: center;
+  font-weight: bold;
+}
+h1 { /* Header 1 - font specifications for level 1 section title  */
+    font-size: 22px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: center;
+    font-weight: bold;
+}
+h2 { /* Header 2 - font specifications for level 2 section title */
+    font-size: 20px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: left;
+    font-weight: bold;
+}
+
+h3 { /* Header 3 - font specifications of level 3 section title  */
+    font-size: 18px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: left;
+}
+
+h4 { /* Header 4 - font specifications of level 4 section title  */
+    font-size: 18px;
+    font-family: "Times New Roman", Times, serif;
+    color: darkred;
+    text-align: left;
+}
+
+body { background-color:white; }
+
+.highlightme { background-color:yellow; }
+
+p { background-color:white; }
+
+</style>
+```
+
+
+```{r setup, include=FALSE}
+# code chunk specifies whether the R code, warnings, and output 
+# will be included in the output files.
+if (!require("knitr")) {
+   install.packages("knitr")
+   library(knitr)
+}
+if (!require("tidyverse")) {
+   install.packages("tidyverse")
+library(tidyverse)
+}
+## 
+knitr::opts_chunk$set(echo = TRUE,   # include code chunk in the output file
+                      warning = FALSE,# sometimes, you code may produce warning messages,
+                                      # you can choose to include the warning messages in
+                                      # the output file. 
+                      results = TRUE, # you can also decide whether to include the output
+                                      # in the output file.
+                      message = FALSE,
+                      comment = NA
+                      )  
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Introduction
+
+This dataset is collected internally from a bank about  the monthly loan payment amount and the current bank accounts' balances from the bank customers with either a car loan or a personal loan. The total sample size is 1000. There are 16 variables, including 13 numerical variables and 3 categorical variable. We created 3 featured variable:
+ TotalAmount: Numerical variable, it's the combination of Saving_Amount and Checking-Amount.
+ ActualAmount: Numerical variable, it's the combination of Saving_Amount and Checking-Amount minus Monthly payment Amount.
+ Gender_Marital: Categorical variable, it's the combination of the clients' Gender and marital status. 
+ 
+The purpose of this study is to investigate the effect of genders and marital status on the bank account balances and residual balances after monthly payment for those bank customers with either a car loan or a personal loan.
+
+## Analytical processes
+
+1. Load data, add 10 missing numerical values and generate 3 feature variables
+
+```{r}
+# load CSV bank data
+setwd("C:/Users/Junjie Mei/Desktop/WCU/2025Spring/STA552/Week2")
+mpg <- read.csv("BankLoanDefaultDataset.csv")
+
+# add 10 missing values to both Checking_amount and Saving_amount
+library(tidyverse)
+Checking.missing.id <- sample(1:1000, 10, replace = FALSE)
+Saving.missing.id <- sample(1:1000, 10, replace = FALSE) 
+mpg$Checking_amount[Checking.missing.id] <- NA
+mpg$Saving_amount[Saving.missing.id] <- NA
+
+#generate 3 feature variables
+mpg <- mutate(mpg, TotalAmount = Saving_amount + Checking_amount )
+mpg <- mutate(mpg, ActualAmount = Saving_amount + Checking_amount - Amount ) 
+mpg <- mutate(mpg, Gender_Marital = paste(Gender, Marital_status, sep = " "))
+```
+
+
+2. Determine the effect of Marital status on the account balances and the residual balances after monthly payment.
+
+```{r}
+boxplot(TotalAmount ~ Marital_status, data = mpg,
+                 main = "Boxplot of TotalAmount by Marital_status",
+                 xlab = "Marital_status",
+                 ylab = "TotalAmount",
+                 col = c("lightblue", "lightgreen", "lightcoral"))
+				 
+boxplot(ActualAmount ~ Marital_status, data = mpg,
+         main = "Boxplot of ActualAmount by Marital_status",
+         xlab = "Marital_status",
+         ylab = "ActualAmount",
+         col = c("lightblue", "lightgreen", "lightcoral"))
+```
+
+There is no significant difference on on the account balances and the residual balances after monthly payments between married customers and signle customers.
+
+
+
+3. Determine the effect of the genders on the account balances and the residual balances after monthly payment.
+
+```{r}
+boxplot(TotalAmount ~ Gender, data = mpg,
+        main = "Boxplot of TotalAmount by Gender",
+        xlab = "Gender",
+        ylab = "TotalAmount",
+        col = c("lightblue", "lightgreen", "lightcoral"))
+				 
+boxplot(ActualAmount ~ Gender_Marital, data = mpg,
+        main = "Boxplot of ActualAmount by Gender_Marital",
+        xlab = "Gender_Marital",
+        ylab = "ActualAmount",
+        col = c("lightblue", "lightgreen", "lightcoral"))	
+```
+
+There is no significant difference on on the account balances and the residual balances after monthly payments between male customers and female customers.
+
+4. Determine the effect of both the genders and marital status on the account balances and the residual balances after monthly payment
+
+```{r}
+boxplot(TotalAmount ~ Gender_Marital, data = mpg,
+        main = "Boxplot of TotalAmount by Gender_Marital",
+        xlab = "Gender_Marital",
+        ylab = "TotalAmount",
+        col = c("lightblue", "lightgreen", "lightcoral"))
+				 
+boxplot(ActualAmount ~ Gender, data = mpg,
+        main = "Boxplot of ActualAmount by Gender",
+        xlab = "Gender",
+        ylab = "ActualAmount",
+        col = c("lightblue", "lightgreen", "lightcoral"))	
+```
+
+There is no significant difference on on the account balances and the residual balances after monthly payments between Female single customers,Male Married customers and male single customers. However, there is no female married category, indicating in a married family, only husband will work on car loan and personal loan with this bank on this bank-covered area. 
+
+
+## Conclusions
+
+After analysis, there is no differences between genders and marital statuses for the account balances and the residual balances after monthly payments of this bank's customers with either a car loan or a personal loan. 
+
