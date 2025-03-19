@@ -1,0 +1,423 @@
+---
+title: "STA552 Project #1"
+author: " Junjie (Jason) Mei"
+date: " 03/19/2025 "
+output:
+  html_document: 
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+    number_sections: yes
+    toc_collapsed: yes
+    code_folding: hide
+    code_download: yes
+    smooth_scroll: yes
+    theme: lumen
+  word_document: 
+    toc: yes
+    toc_depth: 4
+    fig_caption: yes
+    keep_md: yes
+  pdf_document: 
+    toc: yes
+    toc_depth: 4
+    fig_caption: yes
+    number_sections: no
+    fig_width: 3
+    fig_height: 3
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{=html}
+
+<style type="text/css">
+
+/* Cascading Style Sheets (CSS) is a stylesheet language used to describe the presentation of a document written in HTML or XML. it is a simple mechanism for adding style (e.g., fonts, colors, spacing) to Web documents. */
+
+h1.title {  /* Title - font specifications of the report title */
+  font-size: 22px;
+  font-weight: bold;
+  color: DarkRed;
+  text-align: center;
+  font-family: "Gill Sans", sans-serif;
+}
+h4.author { /* Header 4 - font specifications for authors  */
+  font-size: 18px;
+  font-weight: bold;
+  font-family: system-ui;
+  color: navy;
+  text-align: center;
+}
+h4.date { /* Header 4 - font specifications for the date  */
+  font-size: 18px;
+  font-family: system-ui;
+  color: DarkBlue;
+  text-align: center;
+  font-weight: bold;
+}
+h1 { /* Header 1 - font specifications for level 1 section title  */
+    font-size: 22px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: center;
+    font-weight: bold;
+}
+h2 { /* Header 2 - font specifications for level 2 section title */
+    font-size: 20px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: left;
+    font-weight: bold;
+}
+
+h3 { /* Header 3 - font specifications of level 3 section title  */
+    font-size: 18px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: left;
+}
+
+h4 { /* Header 4 - font specifications of level 4 section title  */
+    font-size: 18px;
+    font-family: "Times New Roman", Times, serif;
+    color: darkred;
+    text-align: left;
+}
+
+body { background-color:white; }
+
+.highlightme { background-color:yellow; }
+
+p { background-color:white; }
+
+</style>
+```
+
+
+```{r setup, include=FALSE}
+# code chunk specifies whether the R code, warnings, and output 
+# will be included in the output files.
+if (!require("knitr")) {
+   install.packages("knitr")
+   library(knitr)
+}
+if (!require("tidyverse")) {
+   install.packages("tidyverse")
+library(tidyverse)
+}
+if (!require("ggplot2")) {
+   install.packages("ggplot2")
+   library(knitr)
+}
+if (!require("dplyr")) {
+   install.packages("dplyr")
+library(dplyr)
+}
+if (!require("VIM")) {
+   install.packages("VIM")
+   library(VIM)
+}
+if (!require("mice")) {
+   install.packages("mice")
+   library(mice)
+}
+
+## 
+knitr::opts_chunk$set(echo = TRUE,   # include code chunk in the output file
+                      warning = FALSE,# sometimes, you code may produce warning messages,
+                                      # you can choose to include the warning messages in
+                                      # the output file. 
+                      results = TRUE, # you can also decide whether to include the output
+                                      # in the output file.
+                      message = FALSE,
+                      comment = NA
+                      )  
+```
+
+
+## Introduction
+
+This dataset is collected internally from a bank about  the monthly loan payment amount and the current bank accounts' balances from the bank customers with either a car loan or a personal loan. The total sample size is 1000. There are 16 variables, including 13 numerical variables and 3 categorical variable:
+
+ * Checking_amount: current Checking account's balance
+ * Saving_amount: current saving account's balance
+ * Amount: current loan's monthly payment
+ * Term: Current loan's payment times
+ * Credit_score: the customer's credit score
+ * Gender: Customer's gender (Male and Female)
+ * Marital_status: Customer's marital status (Single and Married)
+ * Emp_status: Customer's employed status (employed and unemployed)
+ * Car_loan: whether this customer has a car loan in this bank (1 and 0)
+ * Personal_loan: whether this customer has a personal loan in this bank (1 and 0)
+ * Home_loan: whether this customer has a home loan in this bank (1 and 0)
+ * Education_loan: whether this customer has a education loan in this bank (1 and 0)
+ * Age: this customer's age
+ * No_of_credit_acc: how many credit card account does this customer have in this bank 
+
+In previous two assignment, we intentionally generated missing values and developed different imputation approaches to replace the missing values. In this report, we will ignore these imputation parts and go directly to linear and logistic regresstion models. Here We created one featured variables:
+
+ * TotalAmount: Numerical variable, it's the combination of Saving_Amount and Checking-Amount.
+
+## Linear Regression
+
+The purpose of this project is to generate linear and logistic regression modeling using machine learning approaches. This dataset has 1000 rows with no missing values. The first part is generate a linear regression model. To develop a meaning linear regression model, first of all, we compared the five numerical variables' distribution and their mutual relationship with their Pairwise scatter Plots.
+
+```{r}
+# load CSV bank data
+# setwd("C:/Users/Junjie Mei/Desktop/WCU/2025Spring/STA552/Week2")
+mpg <- read.csv("https://jm1006958.github.io/STA552/BankLoanDefaultDataset.csv")
+
+library(tidyverse)
+#generate  feature  variables 
+mpg <- mutate(mpg, TotalAmount = Saving_amount + Checking_amount )
+
+#print(mpg)
+pairs(mpg[, c("Credit_score", "Age", "TotalAmount", "Amount")], main = "Pairwise Plot of Selected Variables")
+
+```
+
+It seems from these plots that the TotalAmount is possible to be correlated with age and credit_score.  So we calculated the linear regression model to predict TotalAmount using Age + Credit_score, Age and Credit_score respectively. Based on the p-values of these three linear regression model, all of them are significantly correlated. Based on the R-squared, the combination of Age and Credit_score can explain 18.92% of the TotalAmount, and Age alone can explain 17.18% of the TotalAmount, while Credit_score alone can explain 6.797 of the TotalAmount. Here we will choose the following two linear regression models: TotalAmount = 44.7566*Age + 0.8956*Credit_score+1463.7706 and TotalAmount = 50.324*Age + 1971.114 . We use 5-fold cross-validation to select the better one from these two models without using any inferential statistics such as testing procedures or likelihood-based metrics such as AIC or SBC (BIC).
+
+```{r}
+#chooseCRANmirror()
+#install.packages("plotly")
+#library(ggplot2)
+#library(plotly)
+# Fit a linear regression model
+model_lm <- lm(TotalAmount ~ Age + Credit_score, data = mpg)
+
+# Summary of the model
+summary(model_lm)
+
+model_lm1 <- lm(TotalAmount ~ Age , data = mpg)
+
+# Summary of the model
+summary(model_lm1)
+
+model_lm2 <- lm(TotalAmount ~ Credit_score, data = mpg)
+
+# Summary of the model
+summary(model_lm2)
+
+
+# using sample() to perform random splitting
+train.ID = sample(1:dim(mpg)[1], 100, replace = FALSE)  # without replacement
+# training set
+train = mpg[train.ID,]
+test = mpg[-train.ID,]
+## splitting the train set into 5 folds to train and validate the candidate models
+N = dim(train)[1]   # size of training data
+k = 5               # number of folds
+fld.n = ceiling(N/k)
+MSE.m1 = NULL       # null vector to store MSE
+MSE.m2 = NULL      
+for (i in 1:k){
+  valid.ID = ((i-1)*fld.n +1):(i*fld.n)  # observation ID for the i-th validation set 
+  valid.set = train[valid.ID, ]
+  train.set = train[-valid.ID,]
+  ## fitting two candidate models with combined 4 folds of data set
+  M01 = lm(TotalAmount ~  Age + Credit_score, data = train.set)
+  M02 = lm(TotalAmount ~  Age, data = train.set)
+  ## Predicting InfectRsk using the two candidate models based on the validate set
+  predM01 = predict(M01, newdata = valid.set)
+  predM02 = predict(M02, newdata = valid.set)
+  ## calculating the MSE associated with the two models
+  MSE.m1[i] = mean((predM01 - valid.set$TotalAmount)^2)
+  MSE.m2[i] = mean((predM02 - valid.set$TotalAmount)^2)
+}
+## define a data frame to store the MSE of the candidate models
+## 
+MSE = data.frame(fold = rep(1:k,2), MSE = c(MSE.m1, MSE.m2), type=c(rep("Model 1",k), rep("Model 2", k)))
+## line plots of the 
+cvplot = ggplot(data = MSE, aes(x=fold, y=MSE, color = type)) +
+  geom_line() +
+  geom_point() +
+  coord_cartesian(xlim = c(0, 6),
+                  ylim = c(0,360000)) +
+  geom_text(mapping = aes(x=1.0, y=100000, 
+                          label=paste("Model 1 Mean MSE: = ", round(mean(MSE.m1),3), "")), 
+            hjust=0) +
+  geom_text(mapping = aes(x=1.0, y=0.15, 
+                          label=paste("Model 2 Mean MSE: = ", round(mean(MSE.m2),3), "")), 
+            hjust=0) + 
+  ggtitle("Line plots of MSE candidate Models across folds") +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.margin = unit(c(1,1,1,1), "cm"))
+cvplot
+
+
+```
+
+After 5-folf cross validation, these two linear regression models showed similar MSE. However, based on the larger  R-squared, we will choose  TotalAmount = 44.7566*Age + 0.8956*Credit_score+1463.7706 as the better model.We have measured the R-squared of this model before, then the MAE and the RMSE of this model are measured below.
+
+
+```{r}
+# fit a linear regression
+ln.model <- lm(TotalAmount ~ Age + Credit_score, data = mpg)
+# fitted/predicted values
+fit.val <- fitted(ln.model)
+# MAE
+MAE = mean(abs(fit.val-mpg$TotalAmount))
+MAE
+
+# fit a linear regression
+ln.model <- lm(TotalAmount ~ Age + Credit_score, data = mpg)
+# fitted/predicted values
+fit.val <- fitted(ln.model)
+# MSE
+RMSE = sqrt(mean((fit.val-mpg$TotalAmount)^2))
+RMSE
+
+```
+
+After measurement, the MAE (mean absolute error) is 361.2615, and the RMSE (Root Mean Squared Error) is 447.2731 . So here we presented TotalAmount = 44.7566*Age + 0.8956*Credit_score+1463.7706 as our linear regression model. The p-values of Age's coefficient 44.7566, Credit_score's coefficient 0.8956 and the intercept 1463.7706 are all below 0.001, indicating the model is very significant.  Although Age and Credit_score could only explain 18.92% of TotalAmount, this is the best linear regression model we could achieve based on the limited variables of this dataset.
+
+## Logistic Regression
+
+After trying different combination of numerical variables of TotalAmount, Age and Credit_score for the logistic regression models of Education_loan, Personal_loan, Car_loan and Home_loan, we found that the logistic model with TotalAmount and Age to predict the probability of Education_loan is statistically significant (See below). 
+
+
+```{r}
+# Fit a logistic regression model
+model_glm <- glm(Education_loan ~ TotalAmount + Age, family = binomial, data = mpg)
+
+# Summary of the model
+summary(model_glm)
+```
+
+To test how valid and legitimate this logistic regression is, we fit a logistic regression model usEducation_loan  (Yes = 1, No = 0), TotalAmount (the sum of Checking and saving account), and Age as predictors. The resulting model will predict the probability ( P(Education_loan)=1). Using five threshold predicted probabilities (0.0, 0.25, 0.5, 0.75, 1.0), we produce the corresponding confusion matrices as follows.
+
+
+```{r}
+library(caret)
+# fit a logistic
+model.logit <- glm(Education_loan ~ Credit_score + Age, family = binomial, data = mpg)
+# predict probability of P(Y = "Yes")
+probabilities <- round(as.vector(predict(model.logit, type = "response")),3)
+#
+thresholds <- c(0.0, 0.25, 0.5, 0.75, 1.0)
+
+# Loop through thresholds and create confusion matrices
+for (threshold in thresholds) {
+  cat("\nConfusion Matrix for Threshold =", threshold, "\n")
+  
+  # Convert probabilities to predictions
+  # am: 1 = manual transmission, 0 = automatic transmission
+  predictions <- ifelse(probabilities > threshold, "1", "0")
+  # Generate confusion matrix
+  cm <- confusionMatrix(as.factor(predictions), as.factor(mpg$Education_loan), positive = "1")
+  #cm$table
+  print(cm$table)
+}
+
+```
+
+We then completed ROC analysis and AUC analysis for this logistic regression model. ROC Analysis (Receiver Operating Characteristic Analysis) is a graphical technique used to evaluate the performance of a binary classification model. It plots the True Positive Rate (TPR) (also called sensitivity or recall) against the False Positive Rate (FPR) at various classification thresholds.
+
+True Positive Rate (TPR): TP/(TP+FN) , measures the model’s ability to correctly identify positive cases.
+
+False Positive Rate (FPR): FP/(FP+TN), measures the proportion of negative cases incorrectly classified as positive.
+
+The ROC curve helps visualize the trade-off between sensitivity and specificity across different thresholds, providing insight into the model’s classification capability.
+
+Using the confusion matrices and the definition of TPR and FPR from the above illustrative example to plot an ROC curve in the following.
+
+```{r}
+
+# using the above definition of TPR and FPR
+# The first number in TPR and FPR representing the top right.
+# This is because both TPR and FPR are probabilities
+TPR = c(1,18/(18+94), 0/(112+0), 0/(112+0), 0/(112+0), 0/(112+0))
+FPR = c(1,32/(856+32), 0/(888+0), 0/(888+0), 0/(888+0), 0/(888+0))
+plot(FPR, TPR, type = "b", main = "An Illustrative ROC Curve", col ="blue",
+     xlab="1 - Specifity (FPR)", ylab = "Sensitivity (TPR)")
+# add a off-diagonal representing random guess algorithm in binary prediction
+abline(0,1, lty = 2, col = "red")
+# legend
+legend("bottomright", c("Logistic Model", "Random Guess"),
+       col=c("blue", "red"), lty = 1:2, bty="n", cex = 0.9)
+
+```
+
+AUC (Area Under the Curve): The AUC quantifies the overall performance of the ROC curve into a single value, ranging from 0 to 1. There is no formula to calculate AUC unless there are specified parametric distributions of P(Y=1)
+ and P(Y=0)
+ respectively. The calculation is based on the approximation similar to the Riemann Sum approximation of the area under the curve in Calculus. We illustrate this using the above ROC curve.
+
+```{r}
+
+# using the above definition of TPR and FPR
+# The first number in TPR and FPR representing the top right.
+# This is because both TPR and FPR are probabilities
+TPR = c(1,18/(18+94), 0/(112+0), 0/(112+0), 0/(112+0), 0/(112+0))
+FPR = c(1,32/(856+32), 0/(888+0), 0/(888+0), 0/(888+0), 0/(888+0))
+plot(FPR, TPR, type = "b", main = "An Illustrative ROC Curve", col ="blue",
+     xlab="1 - Specifity (FPR)", ylab = "Sensitivity (TPR)")
+# add a off-diagonal representing random guess algorithm in binary prediction
+abline(0,1, lty = 2, col = "red")
+# legend
+legend("bottomright", c("Logistic Model", "Random Guess"),
+       col=c("blue", "red"), lty = 1:2, bty="n", cex = 0.9)
+
+# using the above definition of TPR and FPR
+# The first number in TPR and FPR represents the top right.
+# This is because both TPR and FPR are probabilities
+TPR = round(c(1,18/(18+94), 0/(112+0), 0/(112+0), 0/(112+0), 0/(112+0)),3)
+FPR = round(c(1,32/(856+32), 0/(888+0), 0/(888+0), 0/(888+0), 0/(888+0)),3)
+TPR0 = TPR[7:1]
+FPR0 = FPR[7:1]
+#plot(FPR0, TPR0, type = "b")
+datSenSpe = data.frame(TPR0, FPR0)
+ggROC = ggplot(data = datSenSpe, aes(x = FPR0, y=TPR0)) +
+  geom_line(col = "steelblue") +
+  geom_point(col = "red") +
+  geom_segment(x = FPR0, y = 0, xend = FPR0, yend = TPR0, color = 4) +
+  geom_segment(x = 0, y = 0, xend = FPR0[7], yend = 0, color = 6) +
+  ggtitle("Approximating the AUC of Logistic Model") +
+  xlab("1-specificity (FPR)") + 
+  ylab("Sensitivity (TPR)") +
+  annotate("text", x = 0.025, y = 0.125, label= "A") + 
+  annotate("text", x = 0.105, y = 0.5, label = "B") +
+  annotate("text", x = 0.605, y = 0.5, label = "C") +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = c(0.8, 0.2),
+        plot.margin = unit(c(0.15, 0.15, 0.75, 0.15), "inches"),
+        axis.line = element_line(size = 2, colour = "navy", linetype=1))
+# partition the region under the ROC into trapezoids
+ggROC
+
+```
+
+Next, we use the R function roc() in the R library pROC to find sensitivity and specificity and the AUC we calculated in the above example.It illustrates the approximating of the area of the ROC curve using pROC library.
+
+```{r}
+
+library(pROC)
+#fig.align='center', fig.width=5, fig.height=5, 
+model.logit <- glm(Education_loan ~ Credit_score + Age, family = binomial, data = mpg)
+# predict probability of P(Y = "Yes")
+probabilities <- round(as.vector(predict(model.logit, type = "response")),3)
+##
+#  category = ImputedFramingham$TenYearCHD == 1
+ROCobj <- roc(mpg$Education_loan, probabilities)
+Sen <- ROCobj$sensitivities
+Spe <- ROCobj$specificities
+pROCdata <- data.frame(TPR=Sen, FPR = (1 - Spe))
+AUC <- ROCobj$auc
+ggpROC = ggplot(data = pROCdata, aes(x = FPR, y=TPR)) +
+  geom_line(col = "steelblue") +
+  geom_point(col = "red") +
+  ggtitle("ROC of Logistic Model Using pROC Library") +
+  xlab("1-specificity (FPR)") + 
+  ylab("Sensitivity (TPR)") +
+  annotate("text", x = 0.605, y = 0.5, label = as,character(AUC)) +
+  theme(plot.title = element_text(hjust = 0.5),
+        legend.position = c(0.8, 0.2),
+        plot.margin = unit(c(0.15, 0.15, 0.75, 0.15), "inches"),
+        axis.line = element_line(size = 2, colour = "navy", linetype=1))
+# partition the region under the ROC into trapezoids
+ggpROC
+```
+
+Therefore, our statistically-significant logistic regression model is p = expo(3.4467365-0.0005100 * TotalAmount-0.1242372 * Age)/(1+expo(3.4467365-0.0005100 * TotalAmount-0.1242372 * Age)) . Based on our confusion matrix analysis, this logistic regression model's cut-off rate is 0.25 for predicting whether the bank customers have a Education_loan or not. 
+
