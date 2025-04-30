@@ -1,0 +1,1338 @@
+---
+title: "STA552 Project #2"
+author: " Junjie (Jason) Mei"
+date: " 04/20/2025 "
+output:
+  html_document: 
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+    number_sections: yes
+    toc_collapsed: yes
+    code_folding: hide
+    code_download: yes
+    smooth_scroll: yes
+    theme: lumen
+  word_document: 
+    toc: yes
+    toc_depth: 4
+    fig_caption: yes
+    keep_md: yes
+  pdf_document: 
+    toc: yes
+    toc_depth: 4
+    fig_caption: yes
+    number_sections: no
+    fig_width: 3
+    fig_height: 3
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{=html}
+
+<style type="text/css">
+
+/* Cascading Style Sheets (CSS) is a stylesheet language used to describe the presentation of a document written in HTML or XML. it is a simple mechanism for adding style (e.g., fonts, colors, spacing) to Web documents. */
+
+h1.title {  /* Title - font specifications of the report title */
+  font-size: 22px;
+  font-weight: bold;
+  color: DarkRed;
+  text-align: center;
+  font-family: "Gill Sans", sans-serif;
+}
+h4.author { /* Header 4 - font specifications for authors  */
+  font-size: 18px;
+  font-weight: bold;
+  font-family: system-ui;
+  color: navy;
+  text-align: center;
+}
+h4.date { /* Header 4 - font specifications for the date  */
+  font-size: 18px;
+  font-family: system-ui;
+  color: DarkBlue;
+  text-align: center;
+  font-weight: bold;
+}
+h1 { /* Header 1 - font specifications for level 1 section title  */
+    font-size: 22px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: center;
+    font-weight: bold;
+}
+h2 { /* Header 2 - font specifications for level 2 section title */
+    font-size: 20px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: left;
+    font-weight: bold;
+}
+
+h3 { /* Header 3 - font specifications of level 3 section title  */
+    font-size: 18px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: left;
+}
+
+h4 { /* Header 4 - font specifications of level 4 section title  */
+    font-size: 18px;
+    font-family: "Times New Roman", Times, serif;
+    color: darkred;
+    text-align: left;
+}
+
+body { background-color:white; }
+
+.highlightme { background-color:yellow; }
+
+p { background-color:white; }
+
+</style>
+```
+
+
+```{r setup, include=FALSE}
+# code chunk specifies whether the R code, warnings, and output 
+# will be included in the output files.
+if (!require("knitr")) {
+   install.packages("knitr")
+   library(knitr)
+}
+if (!require("tidyverse")) {
+   install.packages("tidyverse")
+library(tidyverse)
+}
+if (!require("ggplot2")) {
+   install.packages("ggplot2")
+   library(knitr)
+}
+if (!require("dplyr")) {
+   install.packages("dplyr")
+library(dplyr)
+}
+if (!require("VIM")) {
+   install.packages("VIM")
+   library(VIM)
+}
+if (!require("mice")) {
+   install.packages("mice")
+   library(mice)
+}
+
+## 
+knitr::opts_chunk$set(echo = TRUE,   # include code chunk in the output file
+                      warning = FALSE,# sometimes, you code may produce warning messages,
+                                      # you can choose to include the warning messages in
+                                      # the output file. 
+                      results = TRUE, # you can also decide whether to include the output
+                                      # in the output file.
+                      message = FALSE,
+                      comment = NA
+                      )  
+```
+
+
+#  Introduction
+
+This Telco Customer Churn dataset is the data from focused customer retention programs in a company called as Telco. This dataset can be used to predict behavior to retain customers. We can analyze all relevant customer data and develop focused customer retention programs. Each row represents a customer, each column contains customer’s attributes. The dataset includes information about: 1. Customers who left within the last month – the column is called Churn; 2. Services that each customer has signed up for – phone, multiple lines, internet, online security, online backup, device protection, tech support, and streaming TV and movies; 3. Customer account information – how long they’ve been a customer, contract, payment method, paperless billing, monthly charges, and total charges; 4.Demographic info about customers – gender, and if they have partners and dependents. 
+
+The total sample size is 7043 rows (customers). There are 21 variables, including 3 numerical variables and other categorical variables:
+
+ * customerID
+ * gender: Whether the customer is a male or a female
+ * SeniorCitizen: Whether the customer is a senior citizen or not (1, 0)
+ * Partner: Whether the customer has a partner or not (Yes, No)
+ * Dependents: Whether the customer has a partner or not (Yes, No)
+ * tenure: Number of months the customer has stayed with the company
+ * PhoneService: Whether the customer has a phone service or not (Yes, No)
+ * MultipleLines: Whether the customer has multiple lines or not (Yes, No, No phone service)
+ * InternetService: Customer’s internet service provider (DSL, Fiber optic, No)
+ * OnlineSecurity: Whether the customer has online security or not (Yes, No, No internet service)
+ * OnlineBackup: Whether the customer has online backup or not (Yes, No, No internet service)
+ * DeviceProtection: Whether the customer has device protection or not (Yes, No, No internet service)
+ * TechSupport: Whether the customer has tech support or not (Yes, No, No internet service)
+ * StreamingTV: Whether the customer has streaming TV or not (Yes, No, No internet service)
+ * StreamingMovies: Whether the customer has streaming movies or not (Yes, No, No internet service)
+ * categorical values: The contract term of the customer (Month-to-month, One year, Two year)
+ * PaperlessBilling: Whether the customer has paperless billing or not (Yes, No)
+ * PaymentMethod: The customer’s payment method (Electronic check, Mailed check, Bank transfer (automatic), Credit card (automatic))
+ * MonthlyCharges: The amount charged to the customer monthly
+ * TotalCharges: The total amount charged to the customer
+ * Churn: Whether the customer churned or not (Yes or No)
+
+Among these variables, only TotalCharges variable has 11 missing values, and all other variables have no missing values at all.
+
+#  Data Preparation
+
+##  Exploratory Data Analysis (EDA), Feature Engineering and Imputation
+
+We use this dataset to generate linear and non-linear regression models to predict customers' behavior to retain in this programs, and the numerical variable TotalCharges. To generate these models, first of all, we convert all categorical variables into dummy variables (only 0 and 1 values). For MultipleLines, OnlineSecurity, OnlineBackup, DeviceProtection, TechSupport, StreamingTV, StreamingMovies variables, "Yes" is converted to 1, "No" and "No phone service" or "No internet service" are converted to 0. Churn, PaperlessBilling, PhoneServices,  Partner, Dependents (Yes or No) are all converted to dummy variables (0 and 1 values). gender's Male is converted to 1, and female is 0. InternetServices (3 categorical values), PaymentMethod (4 categorical values) and Contract (3 categorical values) are converted to 3 (InternetServiceNo, InternetServiceDSL and InternetServiceFiberOptic),4 (PaymentMethodECheck, PaymentMethodMCheck, PaymentMethodCreditCard, PaymentMethodBankTranfer),and 3 (ContractMonth, Contract1Year, Contract2Year) dummy variables (only 0 and 1 values) respectively. 
+
+For 3 numerical variables, first of all, we compared the three numerical variables’ distribution and their mutual relationship with their Pairwise scatter Plots.
+
+```{r}
+# load Telco Customer Churn data
+# setwd("C:/Users/Junjie Mei/Desktop/WCU/2025Spring/STA552/Week2")
+churn <- read.csv("https://jm1006958.github.io/STA552/WA_Fn-UseC_-Telco-Customer-Churn.csv")
+
+# Convert "Yes" to 1 and "No" to 0
+churn$Partner1 <- ifelse(churn$Partner == "Yes", 1, 0)
+churn$Dependents1 <- ifelse(churn$Dependents == "Yes", 1, 0)
+churn$PhoneService1 <- ifelse(churn$PhoneService == "Yes", 1, 0)
+churn$MultipleLines1 <- ifelse(churn$MultipleLines == "Yes", 1, 0)
+churn$InternetService1 <- ifelse(churn$InternetService == "No", 0, 1)
+churn$OnlineSecurity1 <- ifelse(churn$OnlineSecurity == "Yes", 1, 0)
+churn$OnlineBackup1 <- ifelse(churn$OnlineBackup == "Yes", 1, 0)
+churn$DeviceProtection1 <- ifelse(churn$DeviceProtection == "Yes", 1, 0)
+churn$TechSupport1 <- ifelse(churn$TechSupport == "Yes", 1, 0)
+churn$StreamingTV1 <- ifelse(churn$StreamingTV == "Yes", 1, 0)
+churn$StreamingMovies1 <- ifelse(churn$StreamingMovies == "Yes", 1, 0)
+churn$PaperlessBilling1 <- ifelse(churn$PaperlessBilling == "Yes", 1, 0)
+churn$Churn1 <- ifelse(churn$Churn == "Yes", 1, 0)
+churn$InternetServiceNo <- ifelse(churn$InternetService == "No", 1, 0)
+churn$InternetServiceDSL <- ifelse(churn$InternetService == "DSL", 1, 0)
+churn$InternetServiceFiberOptic <- ifelse(churn$InternetService == "Fiber optic", 1, 0)
+churn$ContractMonth <- ifelse(churn$Contract == "Month-to-month", 1, 0)
+churn$Contract1Year <- ifelse(churn$Contract == "One year", 1, 0)
+churn$Contract2Year <- ifelse(churn$Contract == "Two year", 1, 0)
+churn$PaymentMethodECheck <- ifelse(churn$PaymentMethod == "Electronic check", 1, 0)
+churn$PaymentMethodMCheck <- ifelse(churn$PaymentMethod == "Mailed check", 1, 0)
+churn$PaymentMethodCreditCard <- ifelse(churn$PaymentMethod == "Credit card (automatic)", 1, 0)
+churn$PaymentMethodBankTranfer <- ifelse(churn$PaymentMethod == "Bank transfer (automatic)", 1, 0)
+churn$Churn1 <- ifelse(churn$Churn == "Yes", 1, 0)
+churn$gender1 <- ifelse(churn$gender == "Male", 1, 0)
+
+
+library(tidyverse)
+library(pander)
+
+par(mfrow = c(1,2))
+
+ggplot(churn, aes(x = tenure)) +
+  geom_histogram(aes(y = ..density..), bins = 20, fill = "steelblue", color = "black", alpha = 0.7) +
+  geom_density(color = "red", size = 1) +  # Overlay density plot
+  ggtitle("Distribution of tenure") +
+  xlab("tenure") +
+  ylab("Density") +
+  theme_minimal();
+
+ggplot(churn, aes(x = MonthlyCharges)) +
+  geom_histogram(aes(y = ..density..), bins = 20, fill = "steelblue", color = "black", alpha = 0.7) +
+  geom_density(color = "red", size = 1) +  # Overlay density plot
+  ggtitle("Distribution of MonthlyCharges") +
+  xlab("MonthlyCharges") +
+  ylab("Density") +
+  theme_minimal();
+
+ggplot(churn, aes(x = TotalCharges)) +
+  geom_histogram(aes(y = ..density..), bins = 20, fill = "steelblue", color = "black", alpha = 0.7) +
+  geom_density(color = "red", size = 1) +  # Overlay density plot
+  ggtitle("Distribution of TotalCharges") +
+  xlab("TotalCharges") +
+  ylab("Density") +
+  theme_minimal();
+
+#print(churn)
+pairs(churn[, c("tenure", "MonthlyCharges", "TotalCharges")], main = "Pairwise Plot of Selected Variables")
+
+```
+
+Since the TotalCharges variable has 11 missing values, for imputation purposes, we are trying  to find some association of TotalCharges with tenure and MonthlyCharges. From the above Pairwise Plots of these 3 numerical variables and that tenure is the Number of months the customer has stayed with the company, we created a new feature variable Prd_TotalCharges = tenure*MonthlyCharges, and re-do the pairwise plots of these numerical variables, and found that just as predicted, the Prd_TotalCharges variable is strongly and positively correlated with the TotalCharges variable. Therefore we used the Regression-based Imputation approach to imputate the 11 missing values in TotalCharges shown as below. 
+
+```{r}
+churn2 <- churn[, c("tenure", "MonthlyCharges", "TotalCharges", "Partner1", "Dependents1", "PhoneService1", "MultipleLines1", "InternetService1", "OnlineSecurity1", "SeniorCitizen",
+                    "OnlineBackup1", "DeviceProtection1", "TechSupport1",
+                    "StreamingTV1", "StreamingMovies1", "PaperlessBilling1",  "InternetServiceNo", "InternetServiceFiberOptic",
+                    "InternetServiceDSL", "ContractMonth", 
+                    "Contract1Year", "Contract2Year", "PaymentMethodECheck",
+                    "PaymentMethodMCheck", "PaymentMethodCreditCard", "PaymentMethodBankTranfer",
+                    "gender1", "Churn1"     )]
+
+#churn2$log_TotalCharges <- log(churn2$TotalCharges)
+churn2$Prd_TotalCharges <- churn2$MonthlyCharges*churn2$tenure
+#churn2$Prd_TotalCharges <- NULL
+pairs(churn2[, c("tenure", "MonthlyCharges", "TotalCharges", "Prd_TotalCharges")], main = "Pairwise Plot of Selected Variables")
+
+#  Regression-based Imputation for Numerical Features
+
+pred.totalcharges = lm(TotalCharges ~ Prd_TotalCharges, data = churn2)
+newdata = churn2[is.na(churn2$TotalCharges),]
+pred.TotalCharges = predict(pred.totalcharges, newdata = newdata)
+m0 = sum(is.na(churn2$TotalCharges))  
+pred.resid = resid(pred.totalcharges)  
+pred.yrand = pred.TotalCharges + sample(pred.resid, m0, replace = TRUE)
+
+# Ensure no missing values in x-axis data
+#complete_cases <- !is.na(churn2$Prd_TotalCharges) & !is.na(churn2$TotalCharges)
+plot(churn2$Prd_TotalCharges, churn2$TotalCharges, main = "Prd_TotalCharges vs TotalCharges",col="yellow")
+
+abline(pred.totalcharges, col = "steelblue", lty = 2, lwd = 2)
+
+# Plot only for missing values
+if (m0 > 0) {
+  points(newdata$Prd_TotalCharges, pred.TotalCharges, pch=19, col = "red")
+  points(newdata$Prd_TotalCharges, pred.yrand, pch=19, col = "blue")
+}
+
+legend("topleft", c("regression imputation", "random regression imputation"),
+       col=c("red", "blue"), pch=rep(19,2), bty="n", cex = 0.8)
+
+churn2$TotalCharges[is.na(churn2$TotalCharges)] <- pred.yrand
+
+```
+
+# Part I: Regularized Regression Modeling
+Regularized regression modeling is a sophisticated approach that extends traditional regression techniques by incorporating a penalty term into the loss function. This penalty term constrains the magnitude of the regression coefficients, thereby controlling the complexity of the model and mitigating the risk of overfitting. 
+
+## Regularized Linear Regression
+For regularized linear regression, since the feature variable Prd_TotalCharges (the interaction of tenure and MonthlyCharges), is almost perfectly and positively correlated with the TotalCharges variable, we will test the effect of regularized linear regression with and without this feature variable Prd_TotalCharges. First, with this Prd_TotalCharges, we found that both Lasso and ElasticNet regresstion  produce the  best-fitting linear regression model. 
+
+### Regularized Linear Regression with interaction feature variable
+
+#### Coefficient Path Analysis
+λ is the regularization parameter in glmnet() that controls the strength of the penalty applied to the coefficients. A larger λ shrinks the coefficients more aggressively, potentially reducing overfitting but increasing bias. A smaller λ allows the model to fit the data more closely but may lead to overfitting.
+
+We first examine how the hyperparameter λ penalizes the regression coefficients and affects model fit. Coefficient path analysis and the plot of the goodness-of-fit measure (RMSE) are commonly used visual tools for model selection.
+
+```{r}
+# Coefficient Path Analysis
+library(caret)
+library(glmnet)
+set.seed(112233)    # remove the seed by using  set.seed(NULL)
+
+# Load the numerical dataset
+churn_lin <- churn2[,c("tenure", "MonthlyCharges", "Prd_TotalCharges", "TotalCharges")]
+X <- as.matrix(churn_lin[, -4])  # Features (all columns except the target)
+y <- churn_lin$TotalCharges  # Target variable (TotalCharges)
+
+# Split the data into training and testing sets
+train_index <- createDataPartition(y, p = 0.8, list = FALSE)
+X_train <- X[train_index, ]
+X_test <- X[-train_index, ]
+y_train <- y[train_index]
+y_test <- y[-train_index]
+
+# Standardize the data (important for regularization)
+preprocess_params <- preProcess(X_train, method = c("center", "scale"))
+X_train <- predict(preprocess_params, X_train)
+X_test <- predict(preprocess_params, X_test)
+
+## fitting the model
+fit_lasso<- glmnet(X_train, 
+                   y_train, 
+                   alpha = 1)        # lasso regression 
+fit_ridge <- glmnet(X_train, 
+                    y_train, 
+                    alpha = 0)          # Ridge regression
+fit_elastic_net <- glmnet(X_train, 
+                          y_train, 
+                          alpha = 0.5)  # elastic net
+
+## cross-validation
+cv_lasso <- cv.glmnet(X_train, y_train, alpha = 1)   # lasso regression
+cv_ridge <- cv.glmnet(X_train, y_train, alpha = 0)   # Ridge regression
+cv_elastic_net <- cv.glmnet(X_train, y_train, alpha = 0.5)  # elastic net
+
+# Plot coefficient path
+# Plot coefficient paths
+par(mar=c(5,4,6,2), mfrow=c(1,2)) # 
+plot(fit_lasso, xvar = "lambda", label = TRUE,
+     lwd = 1.5,
+     main = "Coefficient Path Analysis: LASSO",
+     cex.main = 0.9,
+     col = rainbow(10))
+abline(v = 1, col = "purple", lty = 4, lwd = 2)
+abline(v = -1, col = "steelblue", lty = 2, lwd = 2)
+
+par(mar=c(5,4,6,3))
+##
+plot(cv_lasso, main = "RMSE Plot: LASSO",
+     cex.main = 0.9)
+
+```
+
+#### Tuning Regularization Parameter
+The performance plot above shows that as λ increases, the MSE also increases. The two vertical lines indicate reference points for selecting λ
+. To avoid overfitting and underfitting, log(λ) should lie between these two lines. After 5-fold cross validation, Lasso and ElasticNet linear regression models showed similar and relatively low RMSE (root mean square error), while Ridge Regression (L2 Regularization) showed a much larger RMSE, indicating the underfitting of this Ridge model in predicting TotalCharges variable with the predictor variables tenure, MonthlyCharges and Prd_TotalCharges. 
+```{r}
+# Tuning Regularization Parameter
+
+# Cross-validation to find the best lambda
+cv_lasso <- cv.glmnet(X_train, y_train, alpha = 1)
+cv_ridge <- cv.glmnet(X_train, y_train, alpha = 0)
+cv_elastic_net <- cv.glmnet(X_train, y_train, alpha = 0.5)
+##
+# Extract coefficients for the best lambda
+best.lasso.lambda <- cv_lasso$lambda.min
+best.ridge.lambda <- cv_ridge$lambda.min
+best.elastic.net.lambda <- cv_elastic_net$lambda.min
+##
+# Lasso Regression (L1 Regularization): 
+# CAUTION: model formula differs from the regular regression formula 
+lasso_model.opt <- glmnet(X_train, 
+                          y_train, 
+                          alpha = 1,      # lasso regression 
+                          lambda = best.lasso.lambda)   # useser selected alpha, optimal lambda
+# can be obtained through CV (see below)
+lasso_predictions.opt <- predict(lasso_model.opt, 
+                                 s = best.lasso.lambda, # user selected lambda value 
+                                 # (regularization paremeter)
+                                 newx = X_test)  # test data set 
+# The following RMSE of prediction serves as a validation - one step validation
+lasso_rmse.opt <- sqrt(mean((y_test - lasso_predictions.opt)^2))   
+
+# Ridge Regression (L2 Regularization)
+ridge_model.opt <- glmnet(X_train, y_train, alpha = 0, lambda = best.ridge.lambda)
+ridge_predictions.opt <- predict(ridge_model.opt, s = best.ridge.lambda, newx = X_test)
+ridge_rmse.opt <- sqrt(mean((y_test - ridge_predictions.opt)^2))
+
+# Elastic Net (Combination of L1 and L2)
+elastic_net_model.opt <- glmnet(X_train, y_train, alpha = 0.5, lambda = 0.1)
+elastic_net_predictions.opt <- predict(elastic_net_model.opt, s = 0.1, newx = X_test)
+elastic_net_rmse.opt <- sqrt(mean((y_test - elastic_net_predictions.opt)^2))
+
+RMSE.opt = cbind(LASSO.opt = lasso_rmse.opt, 
+                 Ridge.opt =  ridge_rmse.opt, 
+                 Elasticnet.opt = elastic_net_rmse.opt)
+pander(RMSE.opt)
+```
+
+#### Extracting LASSO Regression Equation
+```{r}
+##lasso
+# Extract coefficients for the best lambda
+best_lambda.lasso <- cv_lasso$lambda.min
+coefficients.lasso <- coef(cv_lasso, s = best_lambda.lasso)
+# Reconstruct the model equation
+intercept.lasso <- coefficients.lasso[1]
+betas.lasso <- coefficients.lasso[-1]
+cat("Model equation: TotalCharges =", round(intercept.lasso,4), "+", 
+paste(round(betas.lasso,4), colnames(X), sep = "*", collapse = " + "), "\n")
+
+```
+#### Extracting Ridge Regression Equation
+```{r}
+
+##ridge
+# Extract coefficients for the best lambda
+best_lambda.ridge <- cv_ridge$lambda.min
+coefficients.ridge <- coef(cv_ridge, s = best_lambda.ridge)
+# Reconstruct the model equation
+intercept.ridge <- coefficients.ridge[1]
+betas.ridge <- coefficients.ridge[-1]
+cat("Model equation: TotalCharges =", round(intercept.ridge,4), "+", 
+paste(round(betas.ridge,4), colnames(X), sep = "*", collapse = " + "), "\n")
+```
+#### Extracting ElasticNet Regression Equation
+```{r}
+## ElasticNet
+# Extract coefficients for the best lambda
+best_lambda.net <- cv_elastic_net$lambda.min
+coefficients.net <- coef(cv_elastic_net, s = best_lambda.net)
+# Reconstruct the model equation
+intercept.net <- coefficients.net[1]
+betas.net<- coefficients.net[-1]
+cat("Model equation: TotalCharges =", round(intercept.net,4), "+", 
+ paste(round(betas.net,4), colnames(X), sep = "*", collapse = " + "), "\n")
+
+
+```
+
+### Regularized Linear Regression without the interaction feature variable
+
+The following results showed that all Lasso, Ridge and ElasticNet regression models produce similar but very large RMSE (740.7,	752.4 and	740.6 respectively) without this Prd_TotalCharges feature variable, indicating the great importance of the interaction of tenure and MonthlyCharges (Prd_TotalCharges) in predicting the response variable TotalCharges. 
+
+#### Coefficient Path Analysis
+
+```{r}
+# Coefficient Path Analysis
+#library(caret)
+#library(glmnet)
+set.seed(112234)    # remove the seed by using  set.seed(NULL)
+
+# Load the numerical dataset
+churn_lin <- churn2[,c("tenure", "MonthlyCharges", "TotalCharges")]
+X <- as.matrix(churn_lin[, c("tenure", "MonthlyCharges")])  # Features (all columns except the target)
+y <- churn_lin$TotalCharges  # Target variable (TotalCharges)
+
+# Split the data into training and testing sets
+train_index <- createDataPartition(y, p = 0.8, list = FALSE)
+X_train <- X[train_index, ]
+X_test <- X[-train_index, ]
+y_train <- y[train_index]
+y_test <- y[-train_index]
+
+# Standardize the data (important for regularization)
+preprocess_params <- preProcess(X_train, method = c("center", "scale"))
+X_train <- predict(preprocess_params, X_train)
+X_test <- predict(preprocess_params, X_test)
+
+## fitting the model
+fit_lasso<- glmnet(X_train, 
+                   y_train, 
+                   alpha = 1)        # lasso regression 
+fit_ridge <- glmnet(X_train, 
+                    y_train, 
+                    alpha = 0)          # Ridge regression
+fit_elastic_net <- glmnet(X_train, 
+                          y_train, 
+                          alpha = 0.5)  # elastic net
+
+## cross-validation
+cv_lasso <- cv.glmnet(X_train, y_train, alpha = 1)   # lasso regression
+cv_ridge <- cv.glmnet(X_train, y_train, alpha = 0)   # Ridge regression
+cv_elastic_net <- cv.glmnet(X_train, y_train, alpha = 0.5)  # elastic net
+
+# Plot coefficient path
+# Plot coefficient paths
+par(mar=c(5,4,6,2), mfrow=c(1,2)) # 
+plot(fit_lasso, xvar = "lambda", label = TRUE,
+     lwd = 1.5,
+     main = "Coefficient Path Analysis: LASSO",
+     cex.main = 0.9,
+     col = rainbow(10))
+abline(v = 1, col = "purple", lty = 4, lwd = 2)
+abline(v = -1, col = "steelblue", lty = 2, lwd = 2)
+
+par(mar=c(5,4,6,3))
+##
+plot(cv_lasso, main = "RMSE Plot: LASSO",
+     cex.main = 0.9)
+
+```
+
+#### Tuning Regularization Parameter
+```{r}
+# Tuning Regularization Parameter
+
+# Cross-validation to find the best lambda
+cv_lasso <- cv.glmnet(X_train, y_train, alpha = 1)
+cv_ridge <- cv.glmnet(X_train, y_train, alpha = 0)
+cv_elastic_net <- cv.glmnet(X_train, y_train, alpha = 0.5)
+##
+# Extract coefficients for the best lambda
+best.lasso.lambda <- cv_lasso$lambda.min
+best.ridge.lambda <- cv_ridge$lambda.min
+best.elastic.net.lambda <- cv_elastic_net$lambda.min
+##
+# Lasso Regression (L1 Regularization): 
+# CAUTION: model formula differs from the regular regression formula 
+lasso_model.opt <- glmnet(X_train, 
+                          y_train, 
+                          alpha = 1,      # lasso regression 
+                          lambda = best.lasso.lambda)   # useser selected alpha, optimal lambda
+# can be obtained through CV (see below)
+lasso_predictions.opt <- predict(lasso_model.opt, 
+                                 s = best.lasso.lambda, # user selected lambda value 
+                                 # (regularization paremeter)
+                                 newx = X_test)  # test data set 
+# The following RMSE of prediction serves as a validation - one step validation
+lasso_rmse.opt <- sqrt(mean((y_test - lasso_predictions.opt)^2))   
+
+# Ridge Regression (L2 Regularization)
+ridge_model.opt <- glmnet(X_train, y_train, alpha = 0, lambda = best.ridge.lambda)
+ridge_predictions.opt <- predict(ridge_model.opt, s = best.ridge.lambda, newx = X_test)
+ridge_rmse.opt <- sqrt(mean((y_test - ridge_predictions.opt)^2))
+
+# Elastic Net (Combination of L1 and L2)
+elastic_net_model.opt <- glmnet(X_train, y_train, alpha = 0.5, lambda = 0.1)
+elastic_net_predictions.opt <- predict(elastic_net_model.opt, s = 0.1, newx = X_test)
+elastic_net_rmse.opt <- sqrt(mean((y_test - elastic_net_predictions.opt)^2))
+
+RMSE.opt = cbind(LASSO.opt = lasso_rmse.opt, 
+                 Ridge.opt =  ridge_rmse.opt, 
+                 Elasticnet.opt = elastic_net_rmse.opt)
+pander(RMSE.opt)
+```
+
+#### Extracting LASSO Regression Equation
+```{r}
+##lasso
+# Extract coefficients for the best lambda
+best_lambda.lasso <- cv_lasso$lambda.min
+coefficients.lasso <- coef(cv_lasso, s = best_lambda.lasso)
+# Reconstruct the model equation
+intercept.lasso <- coefficients.lasso[1]
+betas.lasso <- coefficients.lasso[-1]
+cat("Model equation: TotalCharges =", round(intercept.lasso,4), "+", 
+paste(round(betas.lasso,4), colnames(X), sep = "*", collapse = " + "), "\n")
+
+```
+
+#### Extracting Ridge Regression Equation
+```{r}
+
+##ridge
+# Extract coefficients for the best lambda
+best_lambda.ridge <- cv_ridge$lambda.min
+coefficients.ridge <- coef(cv_ridge, s = best_lambda.ridge)
+# Reconstruct the model equation
+intercept.ridge <- coefficients.ridge[1]
+betas.ridge <- coefficients.ridge[-1]
+cat("Model equation: TotalCharges =", round(intercept.ridge,4), "+", 
+paste(round(betas.ridge,4), colnames(X), sep = "*", collapse = " + "), "\n")
+```
+
+#### Extracting ElasticNet Regression Equation
+```{r}
+## ElasticNet
+# Extract coefficients for the best lambda
+best_lambda.net <- cv_elastic_net$lambda.min
+coefficients.net <- coef(cv_elastic_net, s = best_lambda.net)
+# Reconstruct the model equation
+intercept.net <- coefficients.net[1]
+betas.net<- coefficients.net[-1]
+cat("Model equation: TotalCharges =", round(intercept.net,4), "+", 
+ paste(round(betas.net,4), colnames(X), sep = "*", collapse = " + "), "\n")
+
+churn_lin <- churn2[,c("tenure", "MonthlyCharges", "Prd_TotalCharges", "TotalCharges")]
+
+```
+
+## Regularized Logistic Regression
+To predict the probablity of churn, we delete this feature variable Prd_TotalCharge, and use the only 3 numerical variables and other converted dummy variables to perform this regularized logistic regression. 
+
+### Coefficient Path Analysis
+In regularized regression, the coefficient path and measures of fit are essential tools for understanding model performance and selecting the optimal regularization parameter.
+
+First, as λ increases, we observe that the magnitude of the coefficients decreases (left panel), while the deviance (error) increases (right panel). The two vertical reference lines serve as guides for selecting an appropriate value of λ in practical applications.
+
+  • A larger value of λ can lead to potential underfitting, as more coefficients are shrunk toward zero (left panel), resulting in a larger error (right panel).
+
+  • A smaller value of λ can lead to potential overfitting, as fewer coefficients are shrunk, allowing more to remain in the model, which results in a smaller error.
+
+```{r}
+library(mlbench)
+
+churn2$Prd_TotalCharges <- NULL
+df <- churn2
+#df
+
+# Split the data into predictors (X) and response (y)
+X <- model.matrix(Churn1 ~ ., df)[,-1]
+y <- df$Churn1
+
+# Split the data into training and testing sets
+set.seed(123)
+trainIndex <- createDataPartition(y, p = 0.8, list = FALSE)
+X_train <- X[trainIndex, ]
+X_test <- X[-trainIndex, ]
+y_train <- y[trainIndex]
+y_test <- y[-trainIndex]
+
+####################
+# Fit LASSO model
+####################
+lasso_model <- glmnet(X_train, y_train, family = "binomial", alpha = 1)
+
+# Cross-validation to find the optimal lambda
+cv_lasso <- cv.glmnet(X_train, y_train, family = "binomial", alpha = 1)
+
+# Optimal lambda
+lambda_lasso <- cv_lasso$lambda.min
+
+# Refit the model with the optimal lambda
+lasso_model_opt <- glmnet(X_train, y_train, 
+                          family = "binomial", 
+                          alpha = 1, 
+                          lambda = lambda_lasso)
+
+
+## Visualize the impact of lambda on shrinking coefficients
+# Plot coefficient paths
+par(mar=c(5,4,6,2), mfrow=c(1,2)) # 
+plot(lasso_model, xvar = "lambda", label = TRUE,
+     col = rainbow(8),
+     lwd = 1,
+     main = "Coefficient Path Plot: LASSO",
+     cex.main = 0.8)
+text(-6, 0.4, "minimum CV error", col="red", cex = 0.6 )
+abline(v = log(cv_lasso$lambda.min), col = "red", lty = 4, lwd = 1)
+abline(v = log(cv_lasso$lambda.1se), col = "blue", lty = 4, lwd = 1)
+
+plot(cv_lasso, main="Measure of Model Fit: LASSO", cex.main = 0.8)
+
+```
+
+### Regularization Parameter Determination
+To avoid potential issues of overfitting and underfitting, a cross-validation was used in glmnet to provide a range of suggested value for the regularization parameter λ: the minimum λ to avoid overfitting and biggest λ to avoid underfitting of the model. Below are the calculated coefficients for the regularized logistic models produced from Lasso, Ridge and ElasticNet Regression algorithm. These coefficients are used to predict the probability of Churn of Telco customers based on the equations for logistic regression models. 
+
+```{r}
+#  Regularization Parameter Determination
+####################
+# Fit Ridge model
+####################
+ridge_model <- glmnet(X_train, y_train, family = "binomial", alpha = 0)
+
+# Cross-validation to find the optimal lambda
+cv_ridge <- cv.glmnet(X_train, y_train, family = "binomial", alpha = 0)
+
+# Optimal lambda
+lambda_ridge <- cv_ridge$lambda.min
+
+# Refit the model with the optimal lambda
+ridge_model_opt <- glmnet(X_train, y_train, 
+                          family = "binomial", 
+                          alpha = 0, 
+                          lambda = lambda_ridge)
+
+############################################
+# Fit Elastic Net model (e.g., alpha = 0.5)
+############################################
+elastic_model <- glmnet(X_train, y_train, family = "binomial", alpha = 0.5)
+
+# Cross-validation to find the optimal lambda
+cv_elastic <- cv.glmnet(X_train, y_train, family = "binomial", alpha = 0.5)
+
+# Optimal lambda
+lambda_elastic <- cv_elastic$lambda.min
+
+# Refit the model with the optimal lambda
+elastic_model_opt <- glmnet(X_train, y_train, 
+                            family = "binomial", 
+                            alpha = 0.5, 
+                            lambda = lambda_elastic)
+
+
+lasso.coef <- as.matrix(coef(lasso_model_opt))
+ridge.coef <- as.matrix(coef(ridge_model_opt))
+elastic.coef <- as.matrix(coef(elastic_model_opt))
+regularized.coef <- data.frame(lasso = lasso.coef[,1],
+                               ridge = ridge.coef[,1],
+                               elasticnet = elastic.coef[,1])
+pander(regularized.coef)
+
+```
+
+### Optimal Cut-off Probability Determination
+In order use the fitted model for predicting the label or classification, instead of using the default cut-off probability of 0.5, the optimal cut-off probability were identified from Lasso, Ridge and ElasticNet Regression models, and they are similar (0.55102, 0.54082 and 0.55102 respectively). In addition, the accuracy to predict the Churn of Telco customers is 0.82741, 0.82457 and 0.82741 from these 3 regularized regression models, which is very good for performance, and is similar to each other.  
+
+```{r}
+# Optimal Cut-off Probability Determination
+
+#############################
+# Predict on the test set: type = "class" uses the default 
+# cut-off probability to be 0.5.
+predict_lasso <- predict(lasso_model_opt, newx = X_test, type = "response")
+predict_ridge <- predict(ridge_model_opt, newx = X_test, type = "response")
+predict_elastic <- predict(elastic_model_opt, newx = X_test, type = "response")
+
+###########################################
+## Optimal cutoff probability determination
+seq.cut <- seq(0,1, length=50)
+# y is a vector of 0 and 1
+acc.lasso <- NULL
+acc.ridge <- NULL
+acc.elastic <- NULL
+for (i in 1:length(seq.cut)){
+  predy.lasso <- ifelse(predict_lasso >seq.cut[i], 1, 0)
+  predy.ridge<- ifelse(predict_ridge >seq.cut[i], 1, 0)
+  predy.elastic<- ifelse(predict_elastic >seq.cut[i], 1, 0)
+  ##
+  acc.lasso[i] <- mean(y_test  == predy.lasso)
+  acc.ridge[i] <- mean(y_test == predy.ridge)
+  acc.elastic[i] <- mean(y_test  == predy.elastic)
+}
+## optimal cut-off: if the maximum accuracy occurs at multiple
+## cut-off probabilities, the average of these cutoff probabilities
+## will be defined as the optimal cutoff probability
+opt.cut.lasso <- mean(seq.cut[which(acc.lasso==max(acc.lasso))])
+opt.cut.ridge<- mean(seq.cut[which(acc.ridge==max(acc.ridge))])
+opt.cut.elastic <- mean(seq.cut[which(acc.elastic==max(acc.elastic))])
+##
+acc.data <- data.frame(prob = rep(seq.cut,3), 
+                       acc=c(acc.lasso, acc.ridge, acc.elastic), 
+                       group = c(rep("lasso",50), rep("ridge",50), rep("elastic",50)))
+
+##
+gg.acc <- ggplot(data = acc.data, aes(x=prob, y = acc, color = group)) +
+  geom_line() +
+  annotate("text", x = 0.6, y = 0.45, 
+           label = paste("LASSO cutoff: ", round(opt.cut.lasso,5), "Accuracy: ", round(max(acc.lasso),5), 
+                         "\nRidge cutoff: ", round(opt.cut.ridge,5), "Accuracy: ", round(max(acc.ridge),5), 
+                         "\nElastic cutoff: ", round(opt.cut.elastic,5), "Accuracy: ", round(max(acc.elastic),5)), 
+           size = 3, 
+           color = "navy") +
+  ggtitle("Cut-off Probability vs Accuracy") +
+  labs(x = "cut-off Probability", 
+       y = "accuracy", color = "Group") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+## ggplotly(gg.acc)
+gg.acc
+
+```
+
+### Local Performance Measures
+With the optimal cut-off probabilities of the corresponding three regularized logistic regression models, we now calculated the local performance measures based on their confusion matrices.Based on the results below, the performance measures for regularized logistic regression from these 3 models are very good and similar to each other. 
+```{r}
+# Optimal Cut-off Probability Determination
+
+#############################
+# Predict on the test set: type = "class" uses the default 
+# cut-off probability to be 0.5.
+predict_lasso <- predict(lasso_model_opt, newx = X_test, type = "response")
+predict_ridge <- predict(ridge_model_opt, newx = X_test, type = "response")
+predict_elastic <- predict(elastic_model_opt, newx = X_test, type = "response")
+
+###########################################
+## Optimal cutoff probability determination
+seq.cut <- seq(0,1, length=50)
+# y is a vector of 0 and 1
+acc.lasso <- NULL
+acc.ridge <- NULL
+acc.elastic <- NULL
+for (i in 1:length(seq.cut)){
+  predy.lasso <- ifelse(predict_lasso >seq.cut[i], 1, 0)
+  predy.ridge<- ifelse(predict_ridge >seq.cut[i], 1, 0)
+  predy.elastic<- ifelse(predict_elastic >seq.cut[i], 1, 0)
+  ##
+  acc.lasso[i] <- mean(y_test  == predy.lasso)
+  acc.ridge[i] <- mean(y_test == predy.ridge)
+  acc.elastic[i] <- mean(y_test  == predy.elastic)
+}
+## optimal cut-off: if the maximum accuracy occurs at multiple
+## cut-off probabilities, the average of these cutoff probabilities
+## will be defined as the optimal cutoff probability
+opt.cut.lasso <- mean(seq.cut[which(acc.lasso==max(acc.lasso))])
+opt.cut.ridge<- mean(seq.cut[which(acc.ridge==max(acc.ridge))])
+opt.cut.elastic <- mean(seq.cut[which(acc.elastic==max(acc.elastic))])
+##
+acc.data <- data.frame(prob = rep(seq.cut,3), 
+                       acc=c(acc.lasso, acc.ridge, acc.elastic), 
+                       group = c(rep("lasso",50), rep("ridge",50), rep("elastic",50)))
+
+##
+gg.acc <- ggplot(data = acc.data, aes(x=prob, y = acc, color = group)) +
+  geom_line() +
+  annotate("text", x = 0.6, y = 0.45, 
+           label = paste("LASSO cutoff: ", round(opt.cut.lasso,5), "Accuracy: ", round(max(acc.lasso),5), 
+                         "\nRidge cutoff: ", round(opt.cut.ridge,5), "Accuracy: ", round(max(acc.ridge),5), 
+                         "\nElastic cutoff: ", round(opt.cut.elastic,5), "Accuracy: ", round(max(acc.elastic),5)), 
+           size = 3, 
+           color = "navy") +
+  ggtitle("Cut-off Probability vs Accuracy") +
+  labs(x = "cut-off Probability", 
+       y = "accuracy", color = "Group") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+## ggplotly(gg.acc)
+gg.acc
+
+# Local Performance Measures
+
+#######################################
+## using the optimal cutoff probability to predict labels
+## 
+pred.lab.lasso <- ifelse(predict_lasso >opt.cut.lasso, 1, 0)
+pred.lab.ridge<- ifelse(predict_ridge >opt.cut.ridge, 1, 0)
+pred.lab.elastic<- ifelse(predict_elastic >opt.cut.elastic, 1, 0)
+
+
+#################################
+# Convert predictions to factors
+pred.lab.lasso.fct <- as.factor(pred.lab.lasso)
+pred.lab.ridge.fct <- as.factor(pred.lab.ridge)
+pred.lab.elastic.fct <- as.factor(pred.lab.elastic)
+
+# Convert actual values to factors
+y_test <- as.factor(y_test)
+
+# Confusion Matrix and Metrics
+confusion.lasso <- confusionMatrix(pred.lab.lasso.fct, y_test)
+confusion.ridge<- confusionMatrix(pred.lab.ridge.fct, y_test)
+confusion.elastic <- confusionMatrix(pred.lab.elastic.fct, y_test)
+
+## Commonly used performance measured
+PerfMeasures <- cbind(lasso = confusion.lasso$byClass, 
+                      ridge = confusion.ridge$byClass, 
+                      elastic = confusion.elastic$byClass)
+pander(PerfMeasures)
+
+```
+
+### ROC Analysis
+To compare the performance of the three regularized logistic regression models (LASSO, Ridge, and Elastic Net) using ROC analysis, we calculated the Area Under the Curve (AUC) and plot the ROC curves. The following ROC curves and the corresponding AUCs are similar to each other. That is, the three regularized regression performed equally well.
+```{r}
+# ROC Analysis
+
+library(pROC)
+# Predicted probabilities for each model: type = "response"
+prob_lasso <- predict(lasso_model_opt, newx = X_test, type = "response")
+prob_ridge <- predict(ridge_model_opt, newx = X_test, type = "response")
+prob_elastic <- predict(elastic_model_opt, newx = X_test, type = "response")
+
+# Compute ROC curves: roc object contains a lot information including
+# sensitivity, specificity, AUC, etc.
+roc_lasso <- roc(y_test, prob_lasso)
+roc_ridge <- roc(y_test, prob_ridge)
+roc_elastic <- roc(y_test, prob_elastic)
+
+# Compute AUC values
+auc_lasso <- auc(roc_lasso)
+auc_ridge <- auc(roc_ridge)
+auc_elastic <- auc(roc_elastic)
+
+## LASSO
+sen.lasso <- roc_lasso$sensitivities
+spe.lasso <- roc_lasso$specificities
+auc.lasso <- roc_lasso$auc
+
+## Ridge
+sen.ridge <- roc_ridge$sensitivities
+spe.ridge <- roc_ridge$specificities
+auc.ridge <- roc_ridge$auc
+
+## Elastic Net
+sen.elastic <- roc_elastic$sensitivities
+spe.elastic <- roc_elastic$specificities
+auc.elastic <- roc_elastic$auc
+
+## Plotting the ROC curves: three colors - green, orange, and purple
+
+plot(1-spe.lasso, sen.lasso, 
+     type = "l",
+     col = "green", 
+     xlim=c(0,1),
+     xlab = "1 - specificity",
+     ylab = "sensitivity",
+     main = "ROC Curves for LASSO, Ridge, and Elastic Net")
+lines(1-spe.ridge, sen.ridge, col = "orange")
+lines(1-spe.elastic, sen.elastic, col = "purple")
+abline(0,1, type = "l", lty = 2, col = "steelblue", lwd = 1)
+
+# Add legend
+legend("bottomright", legend = c(paste("LASSO (AUC =", round(auc_lasso, 3), ")"),
+                                 paste("Ridge (AUC =", round(auc_ridge, 3), ")"),
+                                 paste("Elastic Net (AUC =", round(auc_elastic, 3), ")")),
+       col = c("green", "orange", "purple"), lty = 1, cex = 0.8, bty = "n")
+
+```
+
+# Part II: SVM - Classification and Regression
+
+Here we use both SVM classification and regression models to analyze Telco customer churn data, and compare their performance measures with the normal linear regression models and the regularization regression models.
+
+## Support Vector Machines (SVMs) for Binary Classification
+To demonstrate how to compare candidate models, we will fit Support Vector Regression (SVR) models with both linear and radial basis function (RBF) kernels, as well as an ordinary least squares (OLS) regression model (with step-wise variable selection). The performance of these three regression models will be evaluated using mean squared error (MSE) and mean absolute error (MAE).
+```{r}
+library(MASS)
+# churn2 <- churn2[1:2000, ]
+# Install and load the e1071 package
+library(e1071)
+# Load the Churn1 dataset
+#data("churn2", package = "mlbench")
+##
+## two-way data splitting
+set.seed(123)    # For reproducibility
+index <- sample(1:nrow(churn2), 0.7 * nrow(churn2))
+train.data <- churn2[index, ]
+test.data <- churn2[-index, ]
+##
+## Set up custom cross-validation control
+tune_control <- tune.control(
+  cross = 5,  # Use 5-fold cross-validation, the default is 10-fold cross-validation
+  nrepeat = 1 # Number of repetitions (for repeated cross-validation)
+)
+# names(train.data)
+
+## 
+## Perform a grid search for the best hyperparameters
+tune.RBF <- tune(
+  svm,          # using the primary svm() algorithm to tune parameter
+  Churn1 ~ ., # model formula
+  data = train.data,
+  kernel = "radial",    # You can change the kernel if needed
+  ranges = list(
+    cost = c(0.1,1,10,100), #10^(-1:2),   # tune the hyperparameter C in the loss function
+    gamma = c(0.1, 0.5, 1, 2)  # the hyper parameter in the RBF kernel
+  ),
+  tunecontrol = tune_control  # Use custom cross-validation settings
+)
+# Print the tuning results for inspection
+# print(tune_result)
+##
+## Extract the best model and hyperparameters
+best.RBF <- tune.RBF$best.model
+best.cost.RBF <- best.RBF$cost
+best.gamma.RBF <- best.RBF$gamma
+
+# Print the best hyperparameters onor inspection
+# cat("Best Cost:", best.cost.RBF, "\n")
+# cat("Best Gamma:", best.gamma.RBF, "\n")
+##
+## Train the final SVM model with the best hyperparameters
+train.data$Churn1 <- as.factor(train.data$Churn1)
+test.data$Churn1  <- as.factor(test.data$Churn1)
+
+final.RBF.class <- svm(
+  Churn1 ~ .,
+  data = train.data,
+  kernel = "radial",
+  cost = best.cost.RBF,
+  gamma = best.gamma.RBF
+)
+
+# Print the final model - for inspection
+# print(final_model)
+##
+## Make predictions on the test set: type = "class"
+pred.RBF.class <- predict(final.RBF.class, test.data, type = "class")
+
+# Evaluate the predictions (e.g., using a confusion matrix)-Using default cutoff 0.5
+confusion.matrix.RBF <- table(Predicted = pred.RBF.class, Actual = test.data$Churn1)
+print(confusion.matrix.RBF)
+
+# Calculate accuracy
+accuracy <- sum(diag(confusion.matrix.RBF)) / sum(confusion.matrix.RBF)
+cat("\n\n Accuracy:", accuracy, "\n")
+
+```
+
+The above confusion matrix and accuracy are based on the default cut-off probability of 0.5. The prediction accuracy for the churn of 7043 Telco customers reachs 80.31235% through support vector regression model.
+
+Next, we assess the global performance through ROC analysis. Since ROC analysis is usually used to compare two or more binary classification models, we build two SVM models with linear and RBF kernels respectively, and the standard binary logistic regression models and then compare the three candidate classification models using ROC and AUC.As shown below, linear Kernel SVM model and logistic regression model showed comparable best performance AUCs (0,841 and 0.8492), while the Radial Kernel SVM models also achieved a little bit less performance AUC (0.8078).
+
+The ROC curve above indicates that the linear SVM and standard linear logistic regression models perform better than the RBF SVM models. In addition, one notable observation from the ROC curve is that the sensitivity and the performance AUCs of both the linear SVM and logistic regression models is consistently higher than that of the RBF SVM when the specificity level is less than 80%.
+
+```{r}
+##
+## Set up custom cross-validation control
+tune.control <- tune.control(
+  cross = 5,  # Use 5-fold cross-validation, the default is 10-fold cross-validation
+  nrepeat = 1 # Number of repetitions (for repeated cross-validation)
+)
+## 
+## Perform a grid search for the best hyperparameters
+tune.lin <- tune(
+  svm,          # using the primary svm() algorithm to tune parameter
+  Churn1 ~ ., # model formula
+  data = train.data,
+  kernel = "linear",    # You can change the kernel if needed
+  ranges = list(
+    cost = 10^(-1:2)   # tune the hyperparameter C in the loss function
+  ),
+  tunecontrol = tune.control  # Use custom cross-validation settings
+)
+# Print the tuning results for inspection
+# print(tune_result)
+##
+## Extract the best model and hyperparameters
+best.lin <- tune.lin$best.model
+best.cost.lin <- best.lin$cost
+# Print the best hyperparameters for inspection
+# cat("Best Cost:", best_cost, "\n")
+# cat("Best Gamma:", best_gamma, "\n")
+##
+## Train the final SVM model with the best hyperparameters
+final.lin <- svm(
+  Churn1 ~ .,
+  data = train.data,
+  kernel = "linear",
+  cost = best.cost.lin,
+  probability = TRUE
+)
+
+## Request to return probabilities in final.RBF
+
+final.RBF <- svm(
+  Churn1 ~ .,
+  data = train.data,
+  kernel = "radial",
+  cost = best.cost.RBF,
+  gamma = best.gamma.RBF,
+  probability = TRUE
+)
+########################
+###  logistic regression
+logit.fit <- glm(Churn1 ~ ., data = train.data, family = binomial)
+AIC.logit <- step(logit.fit, direction = "both", trace = 0)
+pred.logit <- predict(AIC.logit, test.data, type = "response")
+
+###
+####################
+# ROC Curve and AUC
+pred.prob.lin <- predict(final.lin, test.data, probability = TRUE)
+pred.prob.RBF <- predict(final.RBF, test.data, probability = TRUE)
+##
+## extracting probabilities
+prob.linear <- attr(pred.prob.lin, "probabilities")[, 2]
+prob.radial <- attr(pred.prob.RBF, "probabilities")[, 2]
+###
+roc_lin <- roc(test.data$Churn1, prob.linear)
+roc_RBF <- roc(test.data$Churn1, prob.radial)
+roc_logit <- roc(test.data$Churn1, pred.logit)
+### Sen-Spe
+lin.sen <- roc_lin$sensitivities
+lin.spe <- roc_lin$specificities
+rad.sen <- roc_RBF$sensitivities
+rad.spe <- roc_RBF$specificities
+logit.sen <- roc_logit$sensitivities
+logit.spe <- roc_logit$specificities
+## AUC
+auc.lin <- roc_lin$auc
+auc.rad <- roc_RBF$auc
+auc.logit <- roc_logit$auc
+## Plotting ROC curves
+
+plot(1-lin.spe, lin.sen,  
+     xlab = "1 - specificity",
+     ylab = "sensitivity",
+     col = "darkred",
+     type = "l",
+     lty = 1,
+     lwd = 1,
+     main = "ROC Curves of SVM")
+lines(1-rad.spe, rad.sen, 
+      col = "blue",
+      lty = 1,
+      lwd = 1)
+lines(1-logit.spe, logit.sen,      
+      col = "orange",
+      lty = 1,
+      lwd = 1)
+abline(0,1, col = "skyblue3", lty = 2, lwd = 2)
+abline(v=c(0.049,0.151), lty = 3, col = "darkgreen")
+legend("bottomright", c("Linear Kernel", "Radial Kernel", "Logistic Regression"),
+       lty = c(1,1,1), lwd = rep(1,3),
+       col = c("red", "blue", "orange"),
+       bty="n",cex = 0.8)
+## annotation - AUC
+text(0.8, 0.46, paste("Linear AUC: ", round(auc.lin,4)), cex = 0.8)
+text(0.8, 0.4, paste("Radial AUC: ", round(auc.rad,4)), cex = 0.8)
+text(0.8, 0.34, paste("Logistic AUC: ", round(auc.logit,4)), cex = 0.8)
+
+
+```
+
+## Support Vector Regression (SVR)
+
+The objective is to predict TotalCharges with the explanatory variables tenure and MonthlyCharges using three regression models — two Support Vector Regression (SVR) models (with RBF and linear kernels), and one traditional linear regression with stepwise selection (AIC) , and compare the performance of these three models.Since we've already known that TotalCharges is closely and positively correlated with the interaction of tenure*MonthlyCharges, the feature variable Prd_TotalCharges. So here we compared these three approaches in performance of predicting TotalCharges with and without this Prd_TotalCharges. 
+
+To demonstrate how to compare candidate models, we will fit Support Vector Regression (SVR) models with both linear and radial basis function (RBF) kernels, as well as an ordinary least squares (OLS) regression model (with step-wise variable selection). The performance of these three regression models will be evaluated using mean squared error (MSE) and mean absolute error (MAE).
+
+### Performance in Predicting TotalCharges with this feature variable Prd_TotalCharges
+
+```{r}
+# Part II 3. Support Vector Regression (SVR)
+#churn2$Prd_TotalCharges <- NULL
+#churn_lin <- churn2[,c("tenure", "MonthlyCharges", "TotalCharges")]
+# Load dataset
+#library(e1071)
+#library(MASS)
+#data(churn_lin)  # churn_lin  data set
+#####
+# Split data into features (X) and target (y)
+X <- churn_lin[, c("tenure", "MonthlyCharges", "Prd_TotalCharges")]  # All columns except the target variable
+y <- churn_lin[, c("TotalCharges")]   # Target variable (TotalCharges)
+#####
+# Split data into training and testing sets
+set.seed(123)
+train.index <- sample(1:nrow(churn_lin), 0.8 * nrow(churn_lin))
+X.train <- X[train.index, ]
+y.train <- y[train.index]
+X.test <- X[-train.index, ]
+y.test <- y[-train.index]
+#####
+churn_lin.train <- churn_lin[train.index, ]
+churn_lin.test <- churn_lin[-train.index, ]
+#####
+## Set up custom cross-validation control
+tune.control <- tune.control(
+  cross = 5,  # Use 5-fold cross-validation, the default is 10-fold cross-validation
+  nrepeat = 1 # Number of repetitions (for repeated cross-validation)
+)
+#####
+# Perform grid search for hyperparameter tuning: RBF kernel is used
+tune.RBF <- tune(svm, train.x = X.train, train.y = y.train, 
+                 ranges = list(epsilon = seq(0.1, 0.5, 0.1), 
+                               cost = c(1, 10, 100), 
+                               gamma = c(0.01, 0.1, 1)), # Hyperpar in RBF
+                 tunecontrol = tune.control(sampling = "cross", 
+                                            cross = 5) # 5-fold cross-validation
+)
+####
+# Display the best parameters
+#print(tune.result$best.parameters)
+#####
+# Train the final model using the best parameters
+final.RBF<- svm(X.train, y.train, 
+                type = "eps-regression",  # Use "nu-regression" for nu-SVR
+                kernel = "radial", 
+                epsilon = tune.RBF$best.parameters$epsilon, 
+                cost = tune.RBF$best.parameters$cost, 
+                gamma = tune.RBF$best.parameters$gamma)
+#####
+# Make predictions on the test set
+pred.RBF <- predict(final.RBF, X.test)
+
+# Evaluate performance
+mse.RBF <- mean((y.test - pred.RBF)^2)    # mean square error
+mae.RBF <- mean(abs(y.test - pred.RBF))   # mean absolute error
+
+#### linear kernel
+
+# Perform grid search for hyperparameter tuning: RBF kernel is used
+tune.lin <- tune(svm, train.x = X.train, train.y = y.train, 
+                 ranges = list(epsilon = seq(0.1, 0.5, 0.1), 
+                               cost = c(1, 10, 100)), 
+                 tunecontrol = tune.control(sampling = "cross", 
+                                            cross = 5) # 5-fold cross-validation
+)
+####
+# Display the best parameters
+#print(tune.result$best.parameters)
+#####
+# Train the final model using the best parameters
+final.lin<- svm(X.train, y.train, 
+                type = "eps-regression",  # Use "nu-regression" for nu-SVR
+                kernel = "linear", 
+                epsilon = tune.lin$best.parameters$epsilon, 
+                cost = tune.lin$best.parameters$cost)
+#####
+# Make predictions on the test set
+pred.lin <- predict(final.lin, X.test)
+
+# Evaluate performance
+mse.lin <- mean((y.test - pred.lin)^2)    # mean square error
+mae.lin <- mean(abs(y.test - pred.lin))   # mean absolute error
+
+
+## ordinary LSE regression model with stepwise variable selection
+lse.fit <- lm(TotalCharges~.,data=churn_lin.train)
+AIC.fit <- stepAIC(lse.fit,direction="both", trace = FALSE)
+pred.lse <- predict(AIC.fit, X.test)
+mse.lse <- mean((y.test - pred.lse)^2)    # mean square error
+mae.lse <- mean(abs(y.test - pred.lse))   # mean absolute error
+###
+par(mfrow=c(2,2), mar=c(2,2,2,2))
+plot(AIC.fit)
+
+#library(pander)
+###
+Performance <- data.frame(RBF.SVR=c(mse.RBF, mae.RBF),
+                          Linear.SVR = c(mse.lin, mae.lin),
+                          LSE.Reg =c(mse.lse, mae.lse))
+row.names(Performance) <- c("MSE", "MAE")
+##
+pander(Performance)
+
+
+```
+
+Here we display the residual diagnostics for the linear model, including: Residuals vs Fitted, Normal Q-Q, Scale-Location and Residuals vs Leverage. We then showed the Mean Squared Error (MSE) and the Mean Absolute Error (MAE) from SVM with RBF kernel (RBF SVR), SVM with linear kernel (Linear SVR) and Linear regression with stepwise AIC (LSE.Reg) models. With this feature variable Prd_TotalCharges, the performance of all three models is very good, and the Linear Regression model is the best. 
+
+###  Performance in Predicting TotalCharges without this feature variable Prd_TotalCharges
+
+```{r}
+# Part II 3. Support Vector Regression (SVR)
+#churn2$Prd_TotalCharges <- NULL
+churn_lin <- churn2[,c("tenure", "MonthlyCharges", "TotalCharges")]
+# Load dataset
+#library(e1071)
+#library(MASS)
+#data(churn_lin)  # churn_lin  data set
+#####
+# Split data into features (X) and target (y)
+X <- churn_lin[, c("tenure", "MonthlyCharges")]  # All columns except the target variable
+y <- churn_lin[, c("TotalCharges")]   # Target variable (TotalCharges)
+#####
+# Split data into training and testing sets
+set.seed(124)
+train.index <- sample(1:nrow(churn_lin), 0.8 * nrow(churn_lin))
+X.train <- X[train.index, ]
+y.train <- y[train.index]
+X.test <- X[-train.index, ]
+y.test <- y[-train.index]
+#####
+churn_lin.train <- churn_lin[train.index, ]
+churn_lin.test <- churn_lin[-train.index, ]
+#####
+## Set up custom cross-validation control
+tune.control <- tune.control(
+  cross = 5,  # Use 5-fold cross-validation, the default is 10-fold cross-validation
+  nrepeat = 1 # Number of repetitions (for repeated cross-validation)
+)
+#####
+# Perform grid search for hyperparameter tuning: RBF kernel is used
+tune.RBF <- tune(svm, train.x = X.train, train.y = y.train, 
+                 ranges = list(epsilon = seq(0.1, 0.5, 0.1), 
+                               cost = c(1, 10, 100), 
+                               gamma = c(0.01, 0.1, 1)), # Hyperpar in RBF
+                 tunecontrol = tune.control(sampling = "cross", 
+                                            cross = 5) # 5-fold cross-validation
+)
+####
+# Display the best parameters
+#print(tune.result$best.parameters)
+#####
+# Train the final model using the best parameters
+final.RBF<- svm(X.train, y.train, 
+                type = "eps-regression",  # Use "nu-regression" for nu-SVR
+                kernel = "radial", 
+                epsilon = tune.RBF$best.parameters$epsilon, 
+                cost = tune.RBF$best.parameters$cost, 
+                gamma = tune.RBF$best.parameters$gamma)
+#####
+# Make predictions on the test set
+pred.RBF <- predict(final.RBF, X.test)
+
+# Evaluate performance
+mse.RBF <- mean((y.test - pred.RBF)^2)    # mean square error
+mae.RBF <- mean(abs(y.test - pred.RBF))   # mean absolute error
+
+#### linear kernel
+
+# Perform grid search for hyperparameter tuning: RBF kernel is used
+tune.lin <- tune(svm, train.x = X.train, train.y = y.train, 
+                 ranges = list(epsilon = seq(0.1, 0.5, 0.1), 
+                               cost = c(1, 10, 100)), 
+                 tunecontrol = tune.control(sampling = "cross", 
+                                            cross = 5) # 5-fold cross-validation
+)
+####
+# Display the best parameters
+#print(tune.result$best.parameters)
+#####
+# Train the final model using the best parameters
+final.lin<- svm(X.train, y.train, 
+                type = "eps-regression",  # Use "nu-regression" for nu-SVR
+                kernel = "linear", 
+                epsilon = tune.lin$best.parameters$epsilon, 
+                cost = tune.lin$best.parameters$cost)
+#####
+# Make predictions on the test set
+pred.lin <- predict(final.lin, X.test)
+
+# Evaluate performance
+mse.lin <- mean((y.test - pred.lin)^2)    # mean square error
+mae.lin <- mean(abs(y.test - pred.lin))   # mean absolute error
+
+
+## ordinary LSE regression model with stepwise variable selection
+lse.fit <- lm(TotalCharges~.,data=churn_lin.train)
+AIC.fit <- stepAIC(lse.fit,direction="both", trace = FALSE)
+pred.lse <- predict(AIC.fit, X.test)
+mse.lse <- mean((y.test - pred.lse)^2)    # mean square error
+mae.lse <- mean(abs(y.test - pred.lse))   # mean absolute error
+###
+par(mfrow=c(2,2), mar=c(2,2,2,2))
+plot(AIC.fit)
+
+#library(pander)
+###
+Performance <- data.frame(RBF.SVR=c(mse.RBF, mae.RBF),
+                          Linear.SVR = c(mse.lin, mae.lin),
+                          LSE.Reg =c(mse.lse, mae.lse))
+row.names(Performance) <- c("MSE", "MAE")
+##
+pander(Performance)
+
+
+```
+
+Without this feature variable Prd_TotalCharges, the performance of all three models becomes much worse (MSE and MAE are much bigger). However, with or without this feature variable, SVM with RBF kernel (RBF SVR) model shows comparable MSE and MAE, and performs much better than Linear.SVR and LSE.Reg models when Prd_TotalCharges is absent, indicating the reliability of this RBF SVR model in different linear and non-liear situations. 
