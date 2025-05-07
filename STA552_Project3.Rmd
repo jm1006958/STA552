@@ -1,0 +1,1805 @@
+---
+title: "STA552 Project #3 CART, Bagging and Random Forest"
+author: " Junjie (Jason) Mei"
+date: " 05/07/2025 "
+output:
+  html_document: 
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+    number_sections: yes
+    toc_collapsed: yes
+    code_folding: hide
+    code_download: yes
+    smooth_scroll: yes
+    theme: lumen
+  word_document: 
+    toc: yes
+    toc_depth: 4
+    fig_caption: yes
+    keep_md: yes
+  pdf_document: 
+    toc: yes
+    toc_depth: 4
+    fig_caption: yes
+    number_sections: no
+    fig_width: 3
+    fig_height: 3
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{=html}
+
+<style type="text/css">
+
+/* Cascading Style Sheets (CSS) is a stylesheet language used to describe the presentation of a document written in HTML or XML. it is a simple mechanism for adding style (e.g., fonts, colors, spacing) to Web documents. */
+
+h1.title {  /* Title - font specifications of the report title */
+  font-size: 22px;
+  font-weight: bold;
+  color: DarkRed;
+  text-align: center;
+  font-family: "Gill Sans", sans-serif;
+}
+h4.author { /* Header 4 - font specifications for authors  */
+  font-size: 18px;
+  font-weight: bold;
+  font-family: system-ui;
+  color: navy;
+  text-align: center;
+}
+h4.date { /* Header 4 - font specifications for the date  */
+  font-size: 18px;
+  font-family: system-ui;
+  color: DarkBlue;
+  text-align: center;
+  font-weight: bold;
+}
+h1 { /* Header 1 - font specifications for level 1 section title  */
+    font-size: 22px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: center;
+    font-weight: bold;
+}
+h2 { /* Header 2 - font specifications for level 2 section title */
+    font-size: 20px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: left;
+    font-weight: bold;
+}
+
+h3 { /* Header 3 - font specifications of level 3 section title  */
+    font-size: 18px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: left;
+}
+
+h4 { /* Header 4 - font specifications of level 4 section title  */
+    font-size: 18px;
+    font-family: "Times New Roman", Times, serif;
+    color: darkred;
+    text-align: left;
+}
+
+body { background-color:white; }
+
+.highlightme { background-color:yellow; }
+
+p { background-color:white; }
+
+</style>
+```
+
+
+```{r setup, include=FALSE}
+# code chunk specifies whether the R code, warnings, and output 
+# will be included in the output files.
+if (!require("knitr")) {
+   install.packages("knitr")
+   library(knitr)
+}
+if (!require("tidyverse")) {
+   install.packages("tidyverse")
+library(tidyverse)
+}
+if (!require("ggplot2")) {
+   install.packages("ggplot2")
+   library(knitr)
+}
+if (!require("dplyr")) {
+   install.packages("dplyr")
+library(dplyr)
+}
+if (!require("VIM")) {
+   install.packages("VIM")
+   library(VIM)
+}
+if (!require("mice")) {
+   install.packages("mice")
+   library(mice)
+}
+
+## 
+knitr::opts_chunk$set(echo = TRUE,   # include code chunk in the output file
+                      warning = FALSE,# sometimes, you code may produce warning messages,
+                                      # you can choose to include the warning messages in
+                                      # the output file. 
+                      results = TRUE, # you can also decide whether to include the output
+                                      # in the output file.
+                      message = FALSE,
+                      comment = NA
+                      )  
+```
+
+
+#  Introduction
+
+This Telco Customer Churn dataset is the data from focused customer retention programs in a company called as Telco. This dataset can be used to predict behavior to retain customers. We can analyze all relevant customer data and develop focused customer retention programs. Each row represents a customer, each column contains customer’s attributes. The dataset includes information about: 1. Customers who left within the last month – the column is called Churn; 2. Services that each customer has signed up for – phone, multiple lines, internet, online security, online backup, device protection, tech support, and streaming TV and movies; 3. Customer account information – how long they’ve been a customer, contract, payment method, paperless billing, monthly charges, and total charges; 4.Demographic info about customers – gender, and if they have partners and dependents. 
+
+The total sample size is 7043 rows (customers). There are 21 variables, including 3 numerical variables and other categorical variables:
+
+ * customerID
+ * gender: Whether the customer is a male or a female
+ * SeniorCitizen: Whether the customer is a senior citizen or not (1, 0)
+ * Partner: Whether the customer has a partner or not (Yes, No)
+ * Dependents: Whether the customer has a partner or not (Yes, No)
+ * tenure: Number of months the customer has stayed with the company
+ * PhoneService: Whether the customer has a phone service or not (Yes, No)
+ * MultipleLines: Whether the customer has multiple lines or not (Yes, No, No phone service)
+ * InternetService: Customer’s internet service provider (DSL, Fiber optic, No)
+ * OnlineSecurity: Whether the customer has online security or not (Yes, No, No internet service)
+ * OnlineBackup: Whether the customer has online backup or not (Yes, No, No internet service)
+ * DeviceProtection: Whether the customer has device protection or not (Yes, No, No internet service)
+ * TechSupport: Whether the customer has tech support or not (Yes, No, No internet service)
+ * StreamingTV: Whether the customer has streaming TV or not (Yes, No, No internet service)
+ * StreamingMovies: Whether the customer has streaming movies or not (Yes, No, No internet service)
+ * categorical values: The contract term of the customer (Month-to-month, One year, Two year)
+ * PaperlessBilling: Whether the customer has paperless billing or not (Yes, No)
+ * PaymentMethod: The customer’s payment method (Electronic check, Mailed check, Bank transfer (automatic), Credit card (automatic))
+ * MonthlyCharges: The amount charged to the customer monthly
+ * TotalCharges: The total amount charged to the customer
+ * Churn: Whether the customer churned or not (Yes or No)
+
+Among these variables, only TotalCharges variable has 11 missing values, and all other variables have no missing values at all.
+
+#  Data Preparation
+
+##  Exploratory Data Analysis (EDA), Feature Engineering and Imputation
+
+We use this dataset to generate linear and non-linear regression models to predict customers' behavior to retain in this programs, and the numerical variable TotalCharges. To generate these models, first of all, we convert all categorical variables into dummy variables (only 0 and 1 values). For MultipleLines, OnlineSecurity, OnlineBackup, DeviceProtection, TechSupport, StreamingTV, StreamingMovies variables, "Yes" is converted to 1, "No" and "No phone service" or "No internet service" are converted to 0. Churn, PaperlessBilling, PhoneServices,  Partner, Dependents (Yes or No) are all converted to dummy variables (0 and 1 values). gender's Male is converted to 1, and female is 0. InternetServices (3 categorical values), PaymentMethod (4 categorical values) and Contract (3 categorical values) are converted to 3 (InternetServiceNo, InternetServiceDSL and InternetServiceFiberOptic),4 (PaymentMethodECheck, PaymentMethodMCheck, PaymentMethodCreditCard, PaymentMethodBankTranfer),and 3 (ContractMonth, Contract1Year, Contract2Year) dummy variables (only 0 and 1 values) respectively. 
+
+For 3 numerical variables, first of all, we compared the three numerical variables’ distribution and their mutual relationship with their Pairwise scatter Plots.
+
+```{r}
+# load Telco Customer Churn data
+# setwd("C:/Users/Junjie Mei/Desktop/WCU/2025Spring/STA552/Week2")
+churn <- read.csv("https://jm1006958.github.io/STA552/WA_Fn-UseC_-Telco-Customer-Churn.csv")
+
+# Convert "Yes" to 1 and "No" to 0
+churn$Partner1 <- ifelse(churn$Partner == "Yes", 1, 0)
+churn$Dependents1 <- ifelse(churn$Dependents == "Yes", 1, 0)
+churn$PhoneService1 <- ifelse(churn$PhoneService == "Yes", 1, 0)
+churn$MultipleLines1 <- ifelse(churn$MultipleLines == "Yes", 1, 0)
+churn$InternetService1 <- ifelse(churn$InternetService == "No", 0, 1)
+churn$OnlineSecurity1 <- ifelse(churn$OnlineSecurity == "Yes", 1, 0)
+churn$OnlineBackup1 <- ifelse(churn$OnlineBackup == "Yes", 1, 0)
+churn$DeviceProtection1 <- ifelse(churn$DeviceProtection == "Yes", 1, 0)
+churn$TechSupport1 <- ifelse(churn$TechSupport == "Yes", 1, 0)
+churn$StreamingTV1 <- ifelse(churn$StreamingTV == "Yes", 1, 0)
+churn$StreamingMovies1 <- ifelse(churn$StreamingMovies == "Yes", 1, 0)
+churn$PaperlessBilling1 <- ifelse(churn$PaperlessBilling == "Yes", 1, 0)
+churn$Churn1 <- ifelse(churn$Churn == "Yes", 1, 0)
+churn$InternetServiceNo <- ifelse(churn$InternetService == "No", 1, 0)
+churn$InternetServiceDSL <- ifelse(churn$InternetService == "DSL", 1, 0)
+churn$InternetServiceFiberOptic <- ifelse(churn$InternetService == "Fiber optic", 1, 0)
+churn$ContractMonth <- ifelse(churn$Contract == "Month-to-month", 1, 0)
+churn$Contract1Year <- ifelse(churn$Contract == "One year", 1, 0)
+churn$Contract2Year <- ifelse(churn$Contract == "Two year", 1, 0)
+churn$PaymentMethodECheck <- ifelse(churn$PaymentMethod == "Electronic check", 1, 0)
+churn$PaymentMethodMCheck <- ifelse(churn$PaymentMethod == "Mailed check", 1, 0)
+churn$PaymentMethodCreditCard <- ifelse(churn$PaymentMethod == "Credit card (automatic)", 1, 0)
+churn$PaymentMethodBankTranfer <- ifelse(churn$PaymentMethod == "Bank transfer (automatic)", 1, 0)
+churn$Churn1 <- ifelse(churn$Churn == "Yes", 1, 0)
+churn$gender1 <- ifelse(churn$gender == "Male", 1, 0)
+
+
+library(tidyverse)
+library(pander)
+
+par(mfrow = c(1,2))
+
+ggplot(churn, aes(x = tenure)) +
+  geom_histogram(aes(y = ..density..), bins = 20, fill = "steelblue", color = "black", alpha = 0.7) +
+  geom_density(color = "red", size = 1) +  # Overlay density plot
+  ggtitle("Distribution of tenure") +
+  xlab("tenure") +
+  ylab("Density") +
+  theme_minimal();
+
+ggplot(churn, aes(x = MonthlyCharges)) +
+  geom_histogram(aes(y = ..density..), bins = 20, fill = "steelblue", color = "black", alpha = 0.7) +
+  geom_density(color = "red", size = 1) +  # Overlay density plot
+  ggtitle("Distribution of MonthlyCharges") +
+  xlab("MonthlyCharges") +
+  ylab("Density") +
+  theme_minimal();
+
+ggplot(churn, aes(x = TotalCharges)) +
+  geom_histogram(aes(y = ..density..), bins = 20, fill = "steelblue", color = "black", alpha = 0.7) +
+  geom_density(color = "red", size = 1) +  # Overlay density plot
+  ggtitle("Distribution of TotalCharges") +
+  xlab("TotalCharges") +
+  ylab("Density") +
+  theme_minimal();
+
+#print(churn)
+pairs(churn[, c("tenure", "MonthlyCharges", "TotalCharges")], main = "Pairwise Plot of Selected Variables")
+
+```
+
+Since the TotalCharges variable has 11 missing values, for imputation purposes, we are trying  to find some association of TotalCharges with tenure and MonthlyCharges. From the above Pairwise Plots of these 3 numerical variables and that tenure is the Number of months the customer has stayed with the company, we created a new feature variable Prd_TotalCharges = tenure*MonthlyCharges, and re-do the pairwise plots of these numerical variables, and found that just as predicted, the Prd_TotalCharges variable is strongly and positively correlated with the TotalCharges variable. Therefore we used the Regression-based Imputation approach to imputate the 11 missing values in TotalCharges shown as below. 
+
+```{r}
+churn2 <- churn[, c("tenure", "MonthlyCharges", "TotalCharges", "Partner1", "Dependents1", "PhoneService1", "MultipleLines1", "InternetService1", "OnlineSecurity1", "SeniorCitizen",
+                    "OnlineBackup1", "DeviceProtection1", "TechSupport1",
+                    "StreamingTV1", "StreamingMovies1", "PaperlessBilling1",  "InternetServiceNo", "InternetServiceFiberOptic",
+                    "InternetServiceDSL", "ContractMonth", 
+                    "Contract1Year", "Contract2Year", "PaymentMethodECheck",
+                    "PaymentMethodMCheck", "PaymentMethodCreditCard", "PaymentMethodBankTranfer",
+                    "gender1", "Churn"   )]
+
+#churn2$log_TotalCharges <- log(churn2$TotalCharges)
+churn2$Prd_TotalCharges <- churn2$MonthlyCharges*churn2$tenure
+#churn2$Prd_TotalCharges <- NULL
+pairs(churn2[, c("tenure", "MonthlyCharges", "TotalCharges", "Prd_TotalCharges")], main = "Pairwise Plot of Selected Variables")
+
+#  Regression-based Imputation for Numerical Features
+
+pred.totalcharges = lm(TotalCharges ~ Prd_TotalCharges, data = churn2)
+newdata = churn2[is.na(churn2$TotalCharges),]
+pred.TotalCharges = predict(pred.totalcharges, newdata = newdata)
+m0 = sum(is.na(churn2$TotalCharges))  
+pred.resid = resid(pred.totalcharges)  
+pred.yrand = pred.TotalCharges + sample(pred.resid, m0, replace = TRUE)
+
+# Ensure no missing values in x-axis data
+#complete_cases <- !is.na(churn2$Prd_TotalCharges) & !is.na(churn2$TotalCharges)
+plot(churn2$Prd_TotalCharges, churn2$TotalCharges, main = "Prd_TotalCharges vs TotalCharges",col="yellow")
+
+abline(pred.totalcharges, col = "steelblue", lty = 2, lwd = 2)
+
+# Plot only for missing values
+if (m0 > 0) {
+  points(newdata$Prd_TotalCharges, pred.TotalCharges, pch=19, col = "red")
+  points(newdata$Prd_TotalCharges, pred.yrand, pch=19, col = "blue")
+}
+
+legend("topleft", c("regression imputation", "random regression imputation"),
+       col=c("red", "blue"), pch=rep(19,2), bty="n", cex = 0.8)
+
+churn2$TotalCharges[is.na(churn2$TotalCharges)] <- pred.yrand
+
+```
+
+From the Pairwise plot of TotalCharges and the feature variable Prd_TotalCharges, we could see the TotalCharges is perfectly in positively linear relationship with the interaction of tenure*MonthlyCharges, Prd_TotalCharges. In Project 2, we tested different linear and non-linear regression models in predicting TotalCharges with and without this feature variable Prd_TotalCharges. Without this Prd_TotalCharges, the linear models performs really bad, while RBF SVM, a non-linear regression model performs much better than several linear regression models. 
+
+
+Here in this project, we will use Classification and Regression Trees (CART) Regression and Classification methods, and two ensemble methods—bagging and random forests, to predict TotalCharges with two numerical variables tenure and MonthlyCharges without the Prd_TotalCharges feature variables, and predict the dichotomous variable churn.
+
+
+# Part I: Predict TotalCharges with CART Regression, Bagging Regression and Random Forest Regression
+
+Based on the the analysis above in Project #2, in this project we use the performance metrics of traditional linear regression with stepwise selection (AIC) - LSE.Reg with the feature variable Prd_TotalCharges as the best reference (RMSE 68.8; MSE 4354; MAE 44.75), to evaluate the performance of CART regression, Bagging regression and Random Forest regression to predict TotalCharges with the predictor variable tenure and MonthlyCharges.
+
+## CART Regression
+
+The Classification and Regression Trees (CART) algorithm is an intuitive but powerful machine learning algorithm that can be used to perform both regression and classification. It is also the base algorithm used to define several other ensemble machine learning algorithms.
+
+For CART regression, Regression Trees are used for predicting continuous outcomes. The splits are chosen to minimize the variance or MSE of the target variable within each subset.The basic logical process of in CART regression tree implementation includes the following steps:
+
+* *Tree Induction*
+  + Start with the entire dataset at the root node
+  + Recursively partition the data into subsets
+  + Create child nodes for each partition
+
+* *Splitting Criteria*
+  + Feature selection: Evaluate all possible features for splitting
+  + Splitting point: For continuous features, find the optimal value to split
+  + Common criteria:
+    - Minimize sum of squared errors (SSE)
+    - Reduction in variance
+
+* *Stopping Rule* - Stop recursion when:
+  + Node contains fewer than the minimum number of observations
+  + Depth reaches maximum limit
+  + Improvement in model fit is below the threshold
+  + All observations in the node have the same target value
+
+* *Pruning Process*
+  + Grow an overly complex tree first
+  + Use cost-complexity pruning to avoid overfitting
+  + Select optimal subtree using cross-validation
+
+* *Prediction*
+  + Traverse tree with new observation
+  + Reach terminal node (leaf)
+  + Use mean value of training observations **in that node** as prediction
+
+Next, we follows the above suggested logical steps to build a regressions. The initinal regression tree is shown below: 
+
+```{r}
+# Load required packages and data
+library(rpart)          # For regression trees
+library(rpart.plot)     # For visualizing trees
+library(MASS)           # Contains churn_lin dataset
+# Load the numerical dataset
+churn_lin <- churn2[,c("tenure", "MonthlyCharges", "TotalCharges")]
+#X <- as.matrix(churn_lin[, -3])  # Features (all columns except the target)
+#y <- churn_lin$TotalCharges  # Target variable (TotalCharges)
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Split data into training (70%) and test (30%) sets
+train.index <- sample(1:nrow(churn_lin), size = 0.7 * nrow(churn_lin))
+train.data <- churn_lin[train.index, ]
+test.data <- churn_lin[-train.index, ]
+
+# 1. Tree Induction & 2. Splitting Criteria
+# Build the initial regression tree using rpart
+tree.model <- rpart(TotalCharges ~ ., 
+                    data = train.data,
+                    method = "anova",     # For regression
+                    control = rpart.control(
+                      minsplit = 200,    # 3. Stopping rule: min observations to split
+                      minbucket = 70,    # Min observations in terminal node
+                      cp = seq(0, 0.05, 20), # Complexity parameter
+                      maxdepth = 5      # Maximum tree depth
+                    ))
+
+# Visualize the unpruned tree
+rpart.plot(tree.model, main = "Initial Regression Tree")
+
+```
+
+The above tree is based on some default stopping rule without post-pruning. Next, we look at the model complexity parameter cp and related errors and appropriately prune the initial tree. 
+
+```{r}
+# 4. Pruning Process
+# Examine cross-validation results
+pander(tree.model$cptable)
+#summary(tree.model)
+#pander(summary(tree.model))
+
+```
+
+The above cp table contains the following information based on cross-validation:
+
+* **CP**: Complexity parameter values. 
+  + Penalty term that balances tree complexity with fit quality
+  + Higher CP values produce simpler trees (fewer splits)
+  + Represents the minimum improvement needed to justify adding another split
+  + Formula: $CP = [R(parent) - R(children)] / R(root)$ where `R` is the risk (error)
+  
+* **nsplit**: Number of splits in the tree (tree size)
+  + Count of splits in the tree (0 = root node only)
+  + Corresponds to tree size (number of splits + 1 = number of terminal nodes)
+
+* **rel error**: Relative error (compared to root node)
+  + Error relative to the root node (always starts at 1)
+  + Calculated as: `Error(current_tree)/Error(root_node)`
+  + Decreases as the tree grows more complex
+
+* **xerror**: Cross-validated error
+  + Cross-validated relative error (most important for pruning)
+  + Estimated via 10-fold cross-validation by default
+  + Often decreases initially then increases (indicating overfitting)
+
+* **xstd**: Standard error of the cross-validated error
+  + Standard error of the cross-validated error estimate
+  + Provides a measure of uncertainty in `xerror`
+  
+The following chart showed us how to find the simplest tree (smallest nsplit) whose xerror is within 1 standard error (xstd) of this minimum. That is, select the largest cp where xerror is within 1 standard error of the minimum (to balance simplicity and accuracy). This is the 1-SE rule for pruning (the dashed line indicates 1-SE rule threshold above the minimum error in the following cp plot).
+
+```{r}
+plotcp(tree.model)
+
+```
+
+As mentioned earlier, in practice, <font color = "red">**select the largest `cp` where `xerror` is within 1 standard error of the minimum (to balance simplicity and accuracy).**</font>
+
+To be more specific,
+
+* Identify the minimum `xerror` and its `cp`.
+* Get the standard error (`xstd`) of the minimum `xerror`.
+* Find the simplest tree (`cp`) Where `xerror $\le$ Threshold`.
+* Prune the tree using `best_cp` (best and simplest tree).
+
+```{r}
+cp.table <- tree.model$cptable
+
+## Identify the minimum `xerror` and its `cp`.
+min.xerror <- min(cp.table[, "xerror"])
+min.cp.row <- which.min(cp.table[, "xerror"])
+min.cp <- cp.table[min.cp.row, "CP"]
+
+## Get the standard error (`xstd`) of the minimum `xerror`
+xerror.std <- cp.table[min.cp.row, "xstd"]
+threshold <- min.xerror + xerror.std  # Upper bound (1 SE rule)
+
+## Find the simplest tree (`cp`) Where `xerror less than or equal to Threshold`.
+best.cp.row <- which(cp.table[, "xerror"] <= threshold)[1]  # First row meeting criteria
+best.cp <- cp.table[best.cp.row, "CP"]
+
+## Two different trees: best CP vs minimum CP
+pruned.tree.best.cp <- prune(tree.model, cp = best.cp)
+pruned.tree.min.cp <- prune(tree.model, cp = min.cp)
+
+# Visualize the pruned tree: best CP
+rpart.plot(pruned.tree.best.cp, main = paste("Pruned Tree (Best CP): cp = ", round(best.cp,4)))
+
+```
+
+The above regression tree uses the best CP value based on the 1-SE. The regression tree below is the pruned tree for minimum cp (cp = 0)
+
+```{r}
+
+# Visualize the pruned tree: minimum CP
+rpart.plot(pruned.tree.min.cp, main = paste("Pruned Tree (Minimum CP): cp = ", round(min.cp,4)))
+
+```
+
+Using the practical approach to selecting cp, the final regression tree algorithm is graphically depicted in the above tree diagram. The value of cp corresponding to the smallest xerror is 0.01 which is the same as the default cp value.
+
+Next, we use the final pruned regression tree to make predictions. Since only two features tenure and MonthlyCharges were used in the algorithm. We also fit the step-wise-based linear regression model and compare the performance of the three models.
+
+```{r}
+# Linear regression model use all features through step-wise variable selection.
+
+# 5. Prediction
+# Make predictions on test data
+pred.best.cp <- predict(pruned.tree.best.cp, newdata = test.data)
+pred.min.cp <- predict(pruned.tree.min.cp, newdata = test.data)
+
+
+# Evaluate model performance: best.cp
+mse.tree.best.cp <- mean((test.data$TotalCharges - pred.best.cp)^2)
+rmse.tree.best.cp <- sqrt(mse.tree.best.cp)
+r.squared.tree.best.cp <- cor(test.data$TotalCharges, pred.best.cp)^2
+# min.cp
+mse.tree.min.cp <- mean((test.data$TotalCharges - pred.min.cp)^2)
+rmse.tree.min.cp <- sqrt(mse.tree.min.cp)
+r.squared.tree.min.cp <- cor(test.data$TotalCharges, pred.min.cp)^2
+
+##
+# fit ordinary least square regression 
+LSE <- lm(TotalCharges ~ tenure + MonthlyCharges, data = train.data)
+AIC.fit <- stepAIC(LSE, direction="both", trace = FALSE)
+pred.lse <-  predict(AIC.fit, newdata = test.data)
+mse.lse <- mean((test.data$TotalCharges - pred.lse)^2) # mean square error
+rmse.lse <- sqrt(mse.lse)                        # root mean square error
+r.squared.lse <- cor(test.data$TotalCharges, pred.lse)^2   # r-squared
+
+###
+Errors <- cbind(MSE = c(mse.tree.best.cp, mse.tree.min.cp, mse.lse),
+                RMSE = c(rmse.tree.best.cp, rmse.tree.min.cp, rmse.lse),
+                r.squared = c(r.squared.tree.best.cp, r.squared.tree.min.cp, r.squared.lse))
+rownames(Errors) = c("tree.best.cp", "tree.min.cp", "lse")
+pander(Errors)
+
+```
+
+The pruned tree with CP corresponding best and minimum cross-validation error greatly outperformed the AIC step-wise linear regression model. 
+
+**Variable importance**  in regression trees identifies which predictors have the strongest influence on the target variable’s predictions. In rpart, for each variable,
+
+* Sum all improvements in squared error (RSS reduction) resulting from splits using that variable
+* Scales the values so the most important variable gets 100
+* All others are expressed relative to this maximum
+
+The CP plots of the two pruned trees are given below. 
+
+```{r}
+par(mfrow = c(1,2))
+
+# Variable importance
+importance <- pruned.tree.best.cp$variable.importance
+barplot(sort(importance, decreasing = TRUE), 
+        main = "Variable Importance: Best CP",
+        las = 2)
+
+# Variable importance
+importance <- pruned.tree.min.cp$variable.importance
+barplot(sort(importance, decreasing = TRUE), 
+        main = "Variable Importance: Minimum CP",
+        las = 2)
+```
+
+For comparison, we also print out the inferential table of the step-wise linear regression model in the following.
+
+```{r}
+pander(summary(AIC.fit)$coef)
+```
+
+## Bagging Regression
+
+**Bootstrap Aggregation**, commonly known as **BAGGING**, is an ensemble learning technique designed to improve the stability and accuracy of machine learning algorithms, particularly those that exhibit high variance, such as decision trees. BAGGING operates on the principle of reducing variance by **averaging** (for regression) or **voting over** (for classification) multiple models trained on different bootstrap samples of the data set.
+
+The follwing Bagging Regression processes involve generating multiple bootstrap samples from the training data, training individual regression trees on each subset, and aggregating their predictions—typically through averaging—to produce a more robust and stable regression model. This ensemble approach reduces variance and enhances generalization compared to a single regression tree.
+
+### Hyperparameter Tuning
+
+
+In the CART examples from the previous note, four key hyperparameters - `cp` (complexity parameter), `maxdepth` (maximum tree depth), `minsplit` (minimum split size), and `minbucket` (minimum leaf size) - were tuned to regulate tree growth and prevent overfitting. For simplicity, this demonstration focuses on tuning only `cp` and `maxdepth`, while the remaining parameters retain their default values as specified below:
+
+  + `minsplit` = 20, 
+  + `minbucket` = round(`minsplit`/3), 
+  + `maxcompete` = 4, 
+  + `maxsurrogate` = 5, 
+  + `usesurrogate` = 2, 
+  + `xval` = 10,
+  + `surrogatestyle` = 0, 
+
+The dataset is partitioned into 80% training and 20% testing subsets, with hyperparameter optimization conducted via **5-fold cross-validation** on the training partition to balance bias-variance trade-offs.
+
+```{r}
+# Load required packages
+library(mlbench)
+library(caret)
+library(ipred)
+#library(rpart)
+
+# Load the Boston Housing dataset
+
+data <- churn_lin
+
+# Split the data
+set.seed(123)
+train.index <- createDataPartition(data$TotalCharges, p = 0.8, list = FALSE)
+train.data <- data[train.index, ]
+test.data <- data[-train.index, ]
+
+# Set up train control for cross-validation
+ctrl <- trainControl(
+  method = "cv",
+  number = 5,
+  verboseIter = TRUE
+)
+
+# Define parameter combinations to test
+nbagg.values <- c(10, 25, 50)     # number bagged trees
+cp.values <- c(0.01, 0.05, 0.1)   # candidate cp values
+maxdepth.values <- c(5, 10, 20)   # maximum depth of the candidate tree
+
+# Create an empty data frame to store results
+results <- data.frame()
+######## Model tuning
+# Manual tuning loop
+for (nbagg in nbagg.values) {
+  for (cp in cp.values) {
+    for (maxdepth in maxdepth.values) {
+      set.seed(123)
+      model <- bagging(
+        TotalCharges ~ .,
+        data = train.data,
+        nbagg = nbagg,
+        coob = TRUE,
+        trControl = ctrl,
+        control = rpart.control(cp = cp, 
+                                maxdepth = maxdepth)
+      )
+      # Get OOB error from each iteration
+      oob.error <- model$err
+      # Store results
+      results <- rbind(results, 
+                       data.frame( nbagg = nbagg,
+                                   cp = cp,
+                                   maxdepth = maxdepth,
+                                   oob.error = oob.error))
+    }
+  }
+}
+# Find the best combination that yields the minimum out-of-bag's error
+best.params <- results[which.min(results$oob.error), ]
+pander(best.params)
+
+```
+
+The above table gives the values of the tuned hyperparameters.
+
+### Final Model Identification
+
+We employ the bagging() function from the R package ipred to train the final bagging regression model. The model’s predictive performance is evaluated on the test set using standard error metrics, which are then compared against both the base regression tree and ordinary least squares (OLS) regression. The following table summarizes the bagging model’s out-of-sample performance. 
+
+```{r}
+# Train the final model with the best parameters
+final.model <- bagging(
+  TotalCharges ~ .,
+  data = train.data,
+  nbagg = best.params$nbagg,
+  coob = TRUE,
+  trControl = ctrl,
+  control = rpart.control(cp = best.params$cp, 
+                          maxdepth = best.params$maxdepth),
+  
+  importance = TRUE
+)
+
+# Evaluate on test set
+predictions <- predict(final.model, newdata = test.data)
+## Using the caret function to calculate errors across re-samples
+baggedError <- postResample(pred = predictions, obs = test.data$TotalCharges)
+pander(baggedError)
+```
+
+### Variable Importance
+
+Following the same approach as in the regression tree model, we extract the bagging model’s variable importance rankings from bagging() using a custom R function. The relative importance scores - derived via permutation-based scoring from the bagging ensemble - are then visualized in the bar chart below.
+
+```{r}
+##
+var.imp <- varImp(final.model)
+# Extract variable importance (requires a custom function)
+get.bagging.importance <- function(model) {
+  # Get all the trees from the bagging model
+  trees <- model$mtrees
+  
+  # Initialize importance vector
+  imp <- numeric(length(trees[[1]]$btree$variable.importance))
+  names(imp) <- names(trees[[1]]$btree$variable.importance)
+  
+  # Sum importance across all trees
+  for(tree in trees) {
+    imp[names(tree$btree$variable.importance)] <- 
+      imp[names(tree$btree$variable.importance)] + 
+      tree$btree$variable.importance
+  }
+  
+  # Average importance
+  imp <- imp/length(trees)
+  return(imp)
+}
+
+# Get importance
+importance.scores <- get.bagging.importance(final.model)
+
+# Sort and plot
+importance.scores <- sort(importance.scores, decreasing = TRUE)
+barplot(importance.scores, horiz = TRUE, las = 1,
+        main = "Variable Importance - Bagging (ipred)",
+        xlab = "Importance Score")
+
+```
+
+### Performance Comparison
+
+We now evaluate the performance of the bagged tree model against two benchmark models: (1) an optimized base regression tree (pruned using the complexity parameter cp that minimized cross-validation error) and (2) a standard Gaussian linear regression model. The following comparison assesses their predictive accuracy on the test set.
+```{r}
+
+##
+## ordinary LSE regression model with step-wise variable selection
+lse.fit <- lm(TotalCharges~.,data = train.data)
+AIC.fit <- stepAIC(lse.fit, direction="both", trace = FALSE)
+##
+pred.lse <- predict(AIC.fit, test.data)
+mae.lse <- mean(abs(test.data$TotalCharges - pred.lse)) # mean absolutesquare error
+mse.lse <- mean((test.data$TotalCharges - pred.lse)^2)  # mean square error
+rmse.lse <- sqrt(mse.lse)                       # root mean square error
+r.squared.lse <- (cor(test.data$TotalCharges, pred.lse))^2 # r-squared
+##
+# Base regression tree
+tree.model <- rpart(TotalCharges ~ ., 
+                    data = train.data,
+                    method = "anova",     # For regression
+                    control = rpart.control(
+                      minsplit = 20,    # 3. Stopping rule: min observations to split
+                      minbucket = 7,    # Min observations in terminal node
+                      cp = seq(0, 0.05, 20), # Complexity parameter
+                      maxdepth = 5      # Maximum tree depth
+                    ))
+# cp table
+cp.table <- tree.model$cptable
+##
+## Identify the minimum `xerror` and its `cp`.
+min.xerror <- min(cp.table[, "xerror"])
+min.cp.row <- which.min(cp.table[, "xerror"])
+min.cp <- cp.table[min.cp.row, "CP"]
+##
+pruned.tree.min.cp <- prune(tree.model, cp = min.cp)
+pred.min.cp <- predict(pruned.tree.min.cp, newdata = test.data)
+##
+# min.cp
+mae.tree.min.cp <- mean(abs(test.data$TotalCharges - pred.min.cp))
+mse.tree.min.cp <- mean((test.data$TotalCharges - pred.min.cp)^2)
+rmse.tree.min.cp <- sqrt(mse.tree.min.cp)
+r.squared.tree.min.cp <- cor(test.data$TotalCharges, pred.min.cp)^2
+##
+###
+Errors <- cbind(MAE = c(baggedError[1], mae.tree.min.cp, mae.lse),
+                RMSE = c(baggedError[3], rmse.tree.min.cp, rmse.lse),
+                r.squared = c(baggedError[2], r.squared.tree.min.cp, r.squared.lse))
+rownames(Errors) = c("bagged Tree", "tree.min.cp", "lse")
+pander(Errors)
+
+
+```
+
+The above comparison table shows that the bagging tree model performs significantly much better than the ordinary least square regression models, but performs a little worse than than the base CART regression models.
+
+## Random Forest Regression
+
+Random Forest (RF) is an ensemble learning method that constructs multiple decision or regression trees during training and outputs the mode of the classes (for classification) or the mean prediction (for regression) of the individual trees. 
+
+Unlike a single regression/classification tree, which can overfit noisy data, a Random Forest introduces randomness in two key ways:
+
+* **Bootstrap Sampling** (Random Sampling with Replacement): Each tree is trained on a different random subset of the training data (i.e., bootstrap data sets).
+
+* **Feature Randomness**: At each split in a decision tree, only a **random subset of features** is considered, reducing correlation among trees and enhancing diversity.
+
+The final prediction is obtained by averaging (for regression) or majority voting (for classification) the predictions of all individual trees, leading to a more stable and accurate model compared to a single decision tree. Random Forests are particularly effective in handling high-dimensional data, nonlinear relationships, and interactions between predictors without requiring extensive feature engineering.
+
+
+**Random Forest Regression** combines multiple **regression trees** to produce a robust and accurate predictive model. It operates on the principle of bootstrap aggregation (bagging), where numerous regression trees are trained on **different bootstrap data sets** with **different subsets of randomly selected feature variables**, and their predictions are averaged to reduce variance and improve generalization.
+
+The same modeling process of BAGGING regression applies to the **random forest** regression. It begins by splitting the dataset into training and testing sets to evaluate the model’s performance on unseen data. During training, each regression tree is built using a **bootstrap sample** and **random feature subsets**, with splits optimized to minimize Mean Squared Error (MSE), achieving reduced overfitting. **Hyperparameter tuning** - such as adjusting the number of trees, tree depth, and minimum samples per leaf - is performed using cross-validation to optimize model accuracy. The best configuration is then retrained on the full training set, with final predictions derived by averaging the outputs of all trees. Performance is assessed using metrics like MSE, RMSE, and $R^2$ to assess prediction accuracy and variance explanation.
+
+### Hyperparameter Tuning
+
+
+Among many hyperparameters, the following are four key ones. 
+
+* **ntree**: Number of trees in the forest. 
+* **mtry**: Number of feature variables randomly sampled as candidates at each split. The default is $\sqrt{p}$, $p$ -s the number of feature variables in the data set. <font color = "blue"> `mtry = p` induces BAGGING regression trees. </font>
+* **nodesize**: Minimum size of terminal nodes.
+* **maxnodes**: Maximum number of terminal nodes.
+
+Next, we will tune these hyperparameters through an explicit 5-fold cross-validation. From a coding perspective, we will define a data frame to store all possible combinations of hyperparameters and then use a single loop to complete the tuning step and report the **optimal** hyperparameters. 
+
+```{r}
+
+library(randomForest)
+
+# Create a grid (data frame) of hyperparameter combinations to test
+hyper.grid <- expand.grid(
+  ntree = c(100, 300, 500),    
+  mtry = c(3, 5, 7), # Dependent on the total number features available in the data
+  nodesize = c(1, 3, 5), 
+  maxnodes = c(5, 10, 20, NULL)
+)
+##
+# Initialize results storage
+results <- data.frame()  # combination of hyperparameters and corresponding RMSE
+best.rmse <- Inf         # place-holder of RMSE with initial value inf
+best.params <- list()    # update the hyperparameter list according to the best rmse
+
+# Set up k-fold cross-validation
+k <- 5                   # 5-fold cross-validation
+n0 <- dim(train.data)[1] # size of the training data 
+fold.size <- floor(n0/k) # fold size. Caution: floor() should be used. 
+# round( ,0) should be used. why?
+
+# Loop through each hyperparameter combination
+for(i in 1:nrow(hyper.grid)) {           
+  current.params <- hyper.grid[i, ]   # vector of hyperparameters for cross validation
+  cv.errors <- numeric(k)             # store RMSE from cross-validation
+  
+  # Perform k-fold cross-validation
+  for(j in 1:k) {
+    # Split into training and validation folds
+    valid.indices <- (1 + fold.size*(j-1)):(fold.size*j)  # CV observation ID vector
+    cv.train <- train.data[-valid.indices, ]   # training data in cross-validation
+    cv.valid <- train.data[valid.indices, ]    # testing data in cross-validation
+    
+    # Train model with current parameters
+    rf.model <- randomForest(
+      TotalCharges ~ .,
+      data = cv.train,
+      ntree = current.params$ntree,
+      mtry = current.params$mtry,
+      nodesize = current.params$nodesize,
+      maxnodes = current.params$maxnodes,
+      importance = TRUE
+    )
+    
+    # Make predictions on validation set
+    preds <- predict(rf.model, newdata = cv.valid)    
+    
+    # Calculate RMSE
+    cv.errors[j] <- sqrt(mean((preds - cv.valid$TotalCharges)^2))
+  }
+  
+  # Average RMSE across folds
+  avg.rmse <- mean(cv.errors)    
+  
+  # Store results: the data frame defined to store combinations of hyperparameters
+  # and the resulting mean RMSEs from cross-validation
+  results <- rbind(results, data.frame(
+    ntree = current.params$ntree,
+    mtry = current.params$mtry,
+    nodesize = current.params$nodesize,
+    maxnodes = ifelse(is.null(current.params$maxnodes), "NULL", current.params$maxnodes),
+    rmse = avg.rmse
+  ))
+  
+  # Update best parameters if current model is better
+  if(avg.rmse < best.rmse) {
+    best.rmse <- avg.rmse
+    best.params <- current.params
+  }
+  # Print progress: It is always a good idea to print something out in loops
+  # cat(paste0("Completed ", i, "/", nrow(hyper.grid), " - RMSE: ", round(avg.rmse, 4), "\n"))
+}  
+pander(data.frame(cbind(current.params,best.rmse)))    # resulting tuned hyperparameters
+
+```
+
+### Final Model Retaining and Evaluation
+
+The final predictive mode needs to be retained using the training data and the tuned hyperparameters obtained in the above step.
+
+```{r}
+
+# Train final model with best parameters on full training set
+final.rf <- randomForest(
+  TotalCharges ~ .,
+  data = train.data,
+  ntree = best.params$ntree,
+  mtry = best.params$mtry,
+  nodesize = best.params$nodesize,
+  maxnodes = best.params$maxnodes,
+  importance = TRUE
+)
+
+# View model summary
+# print(final.rf)
+# Make predictions on test set
+test.preds <- predict(final.rf, newdata = test.data)
+
+# Calculate test RMAE
+test.mae <- mean(abs(test.preds - test.data$TotalCharges))
+# Calculate test RMSE
+test.rmse <- sqrt(mean((test.preds - test.data$TotalCharges)^2))
+# Calculate R-squared
+test.r2 <- 1 - sum((test.data$TotalCharges - test.preds)^2) / sum((test.data$TotalCharges - mean(test.data$TotalCharges))^2)
+# cat("Test R-squared:", test.r2, "\n")
+
+### Performance vector
+RF.performance = c(test.mae, test.rmse, test.r2)
+
+# Plot actual vs predicted values
+plot.data <- data.frame(Actual = test.data$TotalCharges, Predicted = test.preds)
+ggplot(plot.data, aes(x = Actual, y = Predicted)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, color = "red") +
+  labs(title = "Actual vs Predicted Values",
+       x = "Actual Median Value ($1000s)",
+       y = "Predicted Median Value ($1000s)") +
+  theme_minimal()
+
+```
+
+### Performance Comparisons Among Competitors
+
+Next, we compare the performance of random forest regression with least square linear regression, base regression tree, and BAGGING regression for predicting the TotalCharges value using the churn Data.
+
+```{r}
+
+## ordinary LSE regression model with step-wise variable selection
+lse.fit <- lm(TotalCharges~.,data = train.data)
+AIC.fit <- stepAIC(lse.fit, direction="both", trace = FALSE)
+pred.lse <- predict(AIC.fit, test.data)
+mae.lse <- mean(abs(test.data$TotalCharges - pred.lse))      # mean absolute error
+mse.lse <- mean((test.data$TotalCharges - pred.lse)^2)       # mean square error
+rmse.lse <- sqrt(mse.lse)                            # root mean square error
+r.squared.lse <- (cor(test.data$TotalCharges, pred.lse))^2 # r-squared
+
+### base regression tree
+tree.model <- rpart(TotalCharges ~ ., 
+                    data = train.data,
+                    method = "anova",     # For regression
+                    control = rpart.control(
+                      minsplit = 20,    # 3. Stopping rule: min observations to split
+                      minbucket = 7,    # Min observations in terminal node
+                      cp = seq(0, 0.05, 20), # Complexity parameter
+                      maxdepth = 5      # Maximum tree depth
+                    ))
+cp.table <- tree.model$cptable
+min.xerror <- min(cp.table[, "xerror"])
+min.cp.row <- which.min(cp.table[, "xerror"])
+min.cp <- cp.table[min.cp.row, "CP"]
+## 
+pruned.tree.min.cp <- prune(tree.model, cp = min.cp)
+pred.min.cp <- predict(pruned.tree.min.cp, newdata = test.data)
+# performance measures
+mae.tree.min.cp <- mean(abs(test.data$TotalCharges - pred.min.cp))   # MAD
+mse.tree.min.cp <- mean((test.data$TotalCharges - pred.min.cp)^2)
+rmse.tree.min.cp <- sqrt(mse.tree.min.cp)                    # MSE
+r.squared.tree.min.cp <- cor(test.data$TotalCharges, pred.min.cp)^2  # R.sq
+
+### bagging regression: from the previous section
+BaggPerf <- baggedError 
+
+### Performance Comparison Table
+Errors <- cbind(MAE = c(mae.lse, mae.tree.min.cp, BaggPerf[3], RF.performance[1]),
+                RMSE = c(rmse.lse, rmse.tree.min.cp, BaggPerf[1], RF.performance[2]),
+                r.squared = c(r.squared.lse, r.squared.tree.min.cp, BaggPerf[2],RF.performance[3]))
+rownames(Errors) = c("LS Regression", "Regression Tree", "BAGGING", "Random Forest")
+pander(Errors)
+
+```
+
+The performance table above demonstrates that all tree-based regression models consistently outperform the least squares linear regression model. Among the tree-based algorithms, random forest regression performs slightly worse than the single regression tree, but much better than the bagging regression. Although all tree-based regression models could not be "smart" enough to detect the perfect linear relationship of TotalCharges with the interaction of tenure and MonthlyCharges, they performs way much better than the the least squares linear regression model in the absence of manually generated feature variable Prd_TotalCharges - the interaction of tenure and MonthlyCharges. 
+
+### Variable Importance
+
+The following variable importance plots are based on the MSE and node impurity.
+
+```{r}
+# View variable importance
+varImpPlot(final.rf, pch = 19, main = "Variable Importance")
+
+```
+
+# Part II: Predict churn with CART Classification, Bagging Classification and Random Forest Classification
+
+Here we use 3 numerical variables (tenure, MonthlyCharges and TotalCharges) and other converted dummy variables To predict the probability of churn with CART Classification, Bagging Classification and Random Forest Classification models.
+
+## CART Classification 
+
+CART Classification trees are a type of supervised learning algorithm that recursively partitions the feature space to predict categorical target variables. The algorithm follows a greedy top-down approach (also called recursive partitioning) to build a decision tree.
+
+The logical process of implementing a classification algorithm is similar to that of regression trees. Here we outline these basic steps.
+
+* **Tree Induction** - The process of building the tree by recursively partitioning the data:
+  + Start with the entire dataset at the root node
+  + Recursively split the data into purer subsets
+  + Continue until stopping criteria are met
+
+* **Splitting Criteria (Feature Selection and Splitting)** - Determining how to split nodes:
+  + For categorical targets: Typically use Gini impurity or information gain (entropy)
+  + For each possible split, calculate the improvement in purity
+  + Select the split that provides maximum improvement
+  + <font color = "red">**Optimal Tree Size**: Typically where `xerror` is minimized.</font>
+
+* **Stopping Rule** - Conditions to terminate tree growth:
+  + Minimum number of observations in a node
+  + Maximum tree depth
+  + Minimum improvement in purity required for a split
+  + All observations in a node belong to one class
+
+* **Pruning Process** - Reducing tree size to prevent overfitting:
+  + Grow the tree to a maximum depth
+  + Use cost-complexity pruning to remove less important branches
+  + Select optimal tree size using cross-validation
+
+* **Prediction**
+  + Using the final tree to make predictions:
+  + Traverse the tree with new observations
+  + Assign the majority class of the terminal node
+  + Can output class probabilities
+
+Since CART algorithms allow too many hyperparameters, tuning hyperparameters can be challenging. Here are what we do based on recommendations:
+
+* **Start with Defaults**: `minsplit=20`, `minbucket=7`, `cp=0.01`.
+
+* **Adjust Based on Data Size**
+  + For small datasets, reduce `minsplit` and `minbucket`.
+  + For large datasets, increase `maxdepth`.
+
+* **Use Pruning (cp) to avoid overfitting**
+  + Higher `cp` leads to a simpler tree.
+  + Lower `cp`  leads to more complex tree (risk of overfitting).
+
+* Cross-validation (`xval=10`) to select the best `cp`.
+
+* **Optimal Tree Size**: Typically where `xerror` is minimized.
+
+
+We will use the **Telco Customer Churn dataset** to illustrate the process of building a classification tree model and will compare its predictive performance with that of logistic regression through ROC analysis.
+
+The data set contains 7043 customers' data, with the target variable churn indicating whether the customer may terminate Telco's contract.
+
+### Grown An Initial Tree
+
+The initial tree size is controlled by some default hyperparameters `rpart.control()`. It tends to be over-fitted.
+
+In classification, one particularly challenging problem is that the classes (categories) are not equally represented. This is a common issue in real-world applications, such as fraud detection, medical diagnosis, and spam filtering, where one class (the minority class) is significantly underrepresented compared to the other(s) (the majority class). To improve the predictive performance of the classification tree algorithm with the imbalanced categorical response, `rpart()` allows to inclusion of a loss matrix to penalize the misclassification (false positives and false negatives).
+
+```{r}
+
+
+# Load necessary libraries
+# library(rpart)        # For decision trees
+# library(rpart.plot)   # For visualizing trees
+# library(caret)        # For model evaluation
+library(pROC)         # For ROC analysis
+
+# Load the dataset
+churn2 <- churn2[, c("tenure", "MonthlyCharges", "TotalCharges", "Partner1", "Dependents1", "PhoneService1", "MultipleLines1", "InternetService1", "OnlineSecurity1", "SeniorCitizen",
+                    "OnlineBackup1", "DeviceProtection1", "TechSupport1",
+                    "StreamingTV1", "StreamingMovies1", "PaperlessBilling1",  "InternetServiceNo", "InternetServiceFiberOptic",
+                    "InternetServiceDSL", "ContractMonth", 
+                    "Contract1Year", "Contract2Year", "PaymentMethodECheck",
+                    "PaymentMethodMCheck", "PaymentMethodCreditCard", "PaymentMethodBankTranfer",
+                    "gender1", "Churn"     )]
+
+# Split data into training (70%) and test (30%) sets
+set.seed(123)
+train.index <- createDataPartition(churn2$Churn, p = 0.7, list = FALSE)
+train.data <- churn2[train.index, ]
+test.data <- churn2[-train.index, ]
+
+# Build the initial classification tree
+tree.model <- rpart(Churn ~ ., 
+                    data = train.data,
+                    method = "class",   # classification tree
+                    parms = list(split = "gini",  # Using Gini index
+                                 # FN cost = 1, FP cost = 0.5
+                                 loss = matrix(c(0, 0.5, 1, 0), nrow = 2)  
+                    ),
+                    control = rpart.control(minsplit = 15,  # Min 15 obs to split
+                                            minbucket = 5,   # Min 7 obs in leaf
+                                            # Complexity parameter
+                                            cp = 0.001, # complex parameter
+                                            maxdepth = 5))   # Max tree depth
+
+rpart.plot(tree.model, 
+           extra = 104, # check the help document for more information
+           # color palette is a sequential color scheme that blends green (G) to blue (Bu)
+           box.palette = "GnBu",  
+           branch.lty = 1, 
+           shadow.col = "gray", 
+           nn = TRUE)
+
+```
+
+The above tree diagram represents the initial settings in parameters and hyperparameters in arguments parms= and rpart.control.
+
+### Pruning Tree
+To prevent overfitting in decision trees, we employ both pre-pruning and post-pruning strategies. Pre-pruning is implemented through hyperparameters in rpart.control and parms within the rpart() function, which restrict tree growth during construction. Post-pruning, performed after tree development, uses cross-validation to select an optimal complexity parameter (cp), with two recommended approaches: (1) choosing the cp value that minimizes cross-validation error (xerror), or (2) applying the 1-SE rule - selecting the largest cp where xerror ≤ (min xerror + 1 standard error) to balance model complexity and predictive performance.
+
+The following cp table below is used to identify the value of cp to build the final tree.
+
+```{r}
+# Print the complexity parameter table
+pander(tree.model$cptable)
+```
+
+The following cp-plot gives the reference line (broken line) for 1-SE rule. The numbers on the top of the plot represent the leaf nodes in the final tree diagram.
+
+```{r}
+# Plot the cross-validation results
+plotcp(tree.model)
+
+```
+
+For clarity in the analysis, we introduce two notations: min.cp represents the cp value yielding the minimum cross-validation error, while 1SE.cp denotes the cp value selected by the more conservative 1-SE rule (minimal error plus one standard error).Here based on the cp table we generated above (minimu xerror 1.645 + 1 standard error	0.04385), we use the cp = 0.008 to predict the optimal tree model.
+```{r}
+
+# Find the optimal cp value that minimizes cross-validated error
+min.cp <- tree.model$cptable[which.min(tree.model$cptable[,"xerror"]),"CP"]
+
+# Prune the tree using the optimal cp
+pruned.tree.1SE <- prune(tree.model, cp = 0.008)  
+pruned.tree.min <- prune(tree.model, cp = min.cp)
+
+# Visualize the pruned tree
+rpart.plot(pruned.tree.1SE, 
+           extra = 104, # check the help document for more information
+           # color palette is a sequential color scheme that blends green (G) to blue (Bu)
+           box.palette = "GnBu",  
+           branch.lty = 1, 
+           shadow.col = "gray", 
+           nn = TRUE)
+
+```
+
+The above-pruned tree diagram is based on the 1-SE rule. Next, we plot the tree diagram based on the minimum cross-validation error.
+
+```{r}
+
+# Visualize the pruned tree
+rpart.plot(pruned.tree.min, 
+           extra = 104, # check the help document for more information
+           # color palette is a sequential color scheme that blends green (G) to blue (Bu)
+           box.palette = "GnBu",  
+           branch.lty = 1, 
+           shadow.col = "gray", 
+           nn = TRUE)
+
+```
+
+### Global Performance with ROC
+Classification trees make predictions by routing observations through a series of hierarchical splits, starting at the root node and ending at a terminal leaf node. Each split applies a decision rule based on feature values. In R, predictions can be generated as class labels (type = "class") or probabilities (type = "prob"), offering flexibility for different use cases—such as hard classifications for decision-making or probabilities for risk scoring.
+
+```{r}
+
+# Make predictions on the test set
+pred.label.1SE <- predict(pruned.tree.1SE, test.data, type = "class") # default cutoff 0.5
+pred.prob.1SE <- predict(pruned.tree.1SE, test.data, type = "prob")[,2]
+##
+pred.label.min <- predict(pruned.tree.min, test.data, type = "class") # default cutoff 0.5
+pred.prob.min <- predict(pruned.tree.min, test.data, type = "prob")[,2]
+
+# Confusion matrix
+#conf.matrix <- confusionMatrix(pred.label, test.data$Churn, positive = "Yes")
+#print(conf.matrix)
+
+########################
+###  logistic regression
+train.data$Churn <- as.factor(train.data$Churn)
+
+# Set the positive class (if needed)
+train.data$Churn <- relevel(train.data$Churn, ref = "Yes")  # or "No"
+
+# Fit the model
+logit.fit <- glm(Churn ~ ., data = train.data, family = binomial)
+AIC.logit <- step(logit.fit, direction = "both", trace = 0)
+pred.logit <- predict(AIC.logit, test.data, type = "response")
+
+# ROC curve and AUC
+roc.tree.1SE <- roc(test.data$Churn, pred.prob.1SE)
+roc.tree.min <- roc(test.data$Churn, pred.prob.min)
+roc.logit <- roc(test.data$Churn, pred.logit)
+
+##
+### Sen-Spe
+tree.1SE.sen <- roc.tree.1SE$sensitivities
+tree.1SE.spe <- roc.tree.1SE$specificities
+#
+tree.min.sen <- roc.tree.min$sensitivities
+tree.min.spe <- roc.tree.min$specificities
+#
+logit.sen <- roc.logit$sensitivities
+logit.spe <- roc.logit$specificities
+## AUC
+auc.tree.1SE <- roc.tree.1SE$auc
+auc.tree.min <- roc.tree.min$auc
+auc.logit <- roc.logit$auc
+###
+plot(1-logit.spe, logit.sen,  
+     xlab = "1 - specificity",
+     ylab = "sensitivity",
+     col = "darkred",
+     type = "l",
+     lty = 1,
+     lwd = 1,
+     main = "ROC: CART and Logistic Regressopm")
+lines(1-tree.1SE.spe, tree.1SE.sen, 
+      col = "blue",
+      lty = 1,
+      lwd = 1)
+lines(1-tree.min.spe, tree.min.sen,      
+      col = "orange",
+      lty = 1,
+      lwd = 1)
+abline(0,1, col = "skyblue3", lty = 2, lwd = 2)
+legend("bottomright", c("Logistic", "Tree 1SE", "Tree Min"),
+       lty = c(1,1,1), lwd = rep(1,3),
+       col = c("red", "blue", "orange"),
+       bty="n",cex = 0.8)
+## annotation - AUC
+text(0.8, 0.46, paste("Logistic AUC: ", round(auc.logit,4)), cex = 0.8)
+text(0.8, 0.4, paste("Tree 1SE AUC: ", round(auc.tree.1SE,4)), cex = 0.8)
+text(0.8, 0.34, paste("Tree Min AUC: ", round(auc.tree.min,4)), cex = 0.8)
+
+```
+
+The ROC curves and corresponding AUC values demonstrate that the logistic regression model achieves much better performance compared to both pruned tree models, with the more complex tree (pruned using minimum cross-validation error) showing slightly better predictive ability than the simpler tree pruned according to the 1-SE rule.
+
+### Optimal Cut-off Probability
+In binary classification, predicted probabilities must be converted into class labels (e.g., 0 or 1) by applying a cut-off threshold. The choice of this threshold significantly impacts model performance, as it balances accuracy, sensitivity (recall), and specificity. Depending on the particular application, below are key approaches to determine the optimal cut-off.
+
+
+**I. Trade-off Between Sensitivity and Specificity**
+
+Sensitivity (True Positive Rate) measures how well a test identifies true positives, such as correctly detecting diseases, while specificity (True Negative Rate) assesses its ability to correctly rule out negatives, like avoiding false alarms. These metrics often trade off against each other, so choosing the optimal threshold depends on the costs of false positives versus false negatives. A common approach to balancing these metrics is maximizing Youden’s J statistic, which optimizes the trade-off between sensitivity and specificity.
+
+$$
+J = \text{Sensitivity} + \text{Specificity} - 1
+$$
+
+The threshold that maximizes J balances both metrics.
+
+**II. Accuracy-Driven Cut-off**
+
+Accuracy is maximized when the threshold matches the class distribution, with a default of 0.5 for balanced data, but a higher threshold may improve accuracy in imbalanced datasets (e.g., 90% negatives) by reducing false positives. However, accuracy can be misleading in imbalanced scenarios (e.g., 99% accuracy from always predicting the majority class), making alternatives like the geometric mean (G-Mean) a better metric for evaluating model performance.
+
+$$
+G = \text{Sensitivity} \times \text{Specificity}
+$$
+
+This penalizes thresholds that sacrifice one metric for the other.
+
+**III. Cost-Sensitive Thresholding**
+
+When misclassification costs are known (e.g., FN costs 10× more than FP), the threshold can be optimized to minimize total cost:
+
+$$
+\text{Cost} = \text{FP}\times C_{\text{FP}} + \text{FN}\times C_{\text{FN}}
+$$
+are predefined costs.
+
+**IV. ROC and Precision-Recall Curves**
+
+The **ROC curve** plots the **True Positive Rate (TPR)** against the **False Positive Rate (FPR)**, helping to identify the optimal threshold by targeting the top-left corner for the best balance between sensitivity and specificity. In contrast, the **Precision-Recall** curve is more suitable for imbalanced data sets, focusing on the trade-off between precision and recall, with thresholds often selected to maximize metrics like the **F1-score**. Each curve serves a distinct purpose depending on the data distribution and classification goals.
+
+**V. An Illustrative Example**
+
+Here we employ the pruned tree with the `cp` value corresponding to the minimum cross-validation error, using **Cost-Sensitive Thresholding** as the criterion to identify the optimal cut-off probability for prediction implementation. Recall that the cost function for **Cost-Sensitive Thresholding** is given by
+
+$$
+\text{Cost} = \text{FP}\times C_{\text{FP}} + \text{FN}\times C_{\text{FN}}
+$$
+**Note**: While **false positives (FP)** and **false positive rate (FPR)** are related concepts, they represent distinct measures - FP is a raw count, whereas FPR is a normalized proportion. Similarly, **false negatives (FN)** and **false negative rate (FNR)** follow the same distinction: **FN** is an absolute count, while **FNR** is the fraction of missed positives relative to all actual positives. See the following confusion matrix and the definitions of related concepts.
+
+However, since **FPR = 1 - Specificity** and **FNR = 1 - Sensitivity**, it is not straightforward to directly use the information from the pROC object. To address this, we calculate the number of **false negatives (FN)** and **false positives (FP)** at each cut-off point. Then, assuming—for illustrative purposes—that the cost of a **false positive (FP)** is 5 and the cost of a **false negative (FN)** is 20, we evaluate a cost function to determine the optimal probability threshold. This cost-based approach helps identify the cut-off that minimizes overall misclassification costs.
+
+$$
+\text{cost} = 5\times FP + 20 \times FN.
+$$
+
+We consider the pruned tree `tree.min` in the following. *Note the cut-off probability is identified using the training data.* 
+
+```{r}
+
+# preditive probabilities of tree.min model.
+pred.prob.min <- predict(pruned.tree.min, train.data, type = "prob")[,2]
+##
+cost <- NULL
+cutoff <-seq(0,1, length = 10)
+##
+for (i in 1:10){
+  pred.label <- ifelse(pred.prob.min > cutoff[i], "Yes", "No")
+  FN <- sum(pred.label == "No" & train.data$Churn == "Yes")
+  FP <- sum(pred.label == "Yes" & train.data$Churn == "No")
+  cost[i] = 5*FP + 20*FN
+}
+## identify optimal cut-off
+min.ID <- which(cost == min(cost))   # could have multiple minimum
+optim.prob <- mean(cutoff[min.ID])   # take the average of the cut-offs
+##
+plot(cutoff, cost, type = "b", col = "navy",
+     main = "Cutoff vs Misclassification Cost")
+##
+text(0.2, 23000, paste("Optimal cutoff:", round(optim.prob,4)), cex = 0.8)
+
+
+```
+
+The resulting optimal cut-off probability, displayed on the plot above, will be used to make predictions on the test dataset, and the corresponding accuracy will be reported. We emphasize once again that this optimal threshold is chosen specifically to minimize the total cost of misclassification.
+
+## Bagging Classifcation 
+
+The implementation of bagging classification follows a structured workflow involving data splitting, model training, hyperparameter tuning, final model selection, and performance evaluation. We will continue to use the  Pima Indian Diabetes Data to demonstrate the implementation of BAGGING classification.
+
+### Hyperparameter Tuning**
+
+The hyperparameters to be tuned in BAGGING classification algorithms are
+
+* **nbagg**: Number of bootstrap samples (trees)
+* **control**: Parameters for the base learner (rpart in this case)
+* **minsplit**: Minimum number of observations in a node before splitting
+* **maxdepth**: Maximum depth of the tree
+* **cp**: Complexity parameter
+
+We will use `expand.grid` in base R to create a data frame from all combinations of the supplied vectors or factors so that we tune multiple hyperparameters in a single loop.
+
+```{r}
+
+# Load necessary libraries
+# library(caret)     # For machine learning functions
+# library(ipred)     # For bagging implementation
+# library(rpart)     # For decision trees (default base learner)
+# library(mlbench)   # Contains churn2 dataset
+
+# Load the dataset
+#churn2 <- churn2[1:1000,]
+#
+# Set seed for reproducibility
+set.seed(123)
+
+# Split data into training and testing sets
+trainIndex <- createDataPartition(churn2$Churn, p = 0.7, list = FALSE)
+trainData <- churn2[trainIndex, ]
+testData <- churn2[-trainIndex, ]
+
+trainData$Churn <- as.factor(trainData$Churn)
+
+# Set the positive class (if needed)
+trainData$Churn <- relevel(trainData$Churn, ref = "Yes")  # or "No"
+
+testData$Churn <- as.factor(testData$Churn)
+
+# Set the positive class (if needed)
+testData$Churn <- relevel(testData$Churn, ref = "Yes")  # or "No"
+
+# Create a grid of hyperparameter combinations
+hyper.grid <- expand.grid(
+  nbagg = c(25, 50, 100),
+  minsplit = c(5, 10, 20),
+  maxdepth = c(5, 10, 20),
+  cp = c(0.01, 0.001)
+)
+# Initialize a results data frame
+results <- data.frame() # store values of tuned hyperparameters
+best.accuracy <- 0      # store accuracy
+best.params <- list()   # store best values of hyperparameter
+
+# Loop through each hyperparameter combination
+for(i in 1:nrow(hyper.grid)) {
+  # Get current hyperparameters
+  params <- hyper.grid[i, ]
+  
+  # Set rpart control parameters
+  rpart.control <- rpart.control(
+    minsplit = params$minsplit,
+    maxdepth = params$maxdepth,
+    cp = params$cp
+  )
+  
+  # Train bagging model
+  bag.model <- bagging(
+    Churn ~ .,
+    data = trainData,
+    nbagg = params$nbagg,
+    coob = TRUE,
+    control = rpart.control
+  )
+  
+  # Make predictions: default cut-off 0.5
+  preds <- predict(bag.model, newdata = testData)
+  
+  # Calculate accuracy
+  cm <- confusionMatrix(preds, testData$Churn)
+  accuracy <- cm$overall["Accuracy"]
+  
+  # Store results
+  results <- rbind(results, data.frame(
+    nbagg = params$nbagg,
+    minsplit = params$minsplit,
+    maxdepth = params$maxdepth,
+    cp = params$cp,
+    Accuracy = accuracy
+  ))
+  
+  # Update best parameters if current model is better
+  if(accuracy > best.accuracy) {
+    best.accuracy <- accuracy
+    best.params <- params
+  }
+  
+  # Print progress
+  #cat("Completed", i, "of", nrow(hyper.grid), "combinations\n")
+}
+pander(best.params) # run 20min
+
+```
+
+The above-tuned values of hyperparameters will be used to fit the final BAGGING classification model.
+
+
+### Train Final Model With Best Hyperparameters
+
+```{r}
+
+# Set rpart control with best parameters
+best.control <- rpart.control(
+  minsplit = best.params$minsplit,
+  maxdepth = best.params$maxdepth,
+  cp = best.params$cp
+)
+
+# Train final model
+final.bag.model <- bagging(
+  Churn ~ .,
+  data = trainData,
+  nbagg = best.params$nbagg,
+  coob = TRUE,
+  control = best.control
+)
+
+# Evaluate on test set
+final.preds <- predict(final.bag.model, newdata = testData)
+final.cm <- confusionMatrix(final.preds, testData$Churn)
+final.cm$table
+
+```
+
+We use BAGGING classification tree to the test data to predict churn status with the default cut-off probability. Then we have the above confusion matrix. With the confusion matrix, we can calculate variable performance measures.
+
+### Global Measures and Comparisons
+
+We will compare the BAGGING classification model with the base classification tree as well as the logistic regression model using ROC analysis and the area under the corresponding curves.
+
+```{r}
+
+########################
+###  logistic regression
+logit.fit <- glm(Churn ~ ., data = trainData, family = binomial)
+AIC.logit <- step(logit.fit, direction = "both", trace = 0)
+pred.logit <- predict(AIC.logit, testData, type = "response")
+##
+# Build the initial classification tree
+# tree.model <- rpart(Churn ~ ., 
+#                     data = trainData,
+#                    method = "class",   # classification tree
+#                     parms = list(split = "gini",  # Using Gini index
+#                                  # FN cost = 1, FP cost = 0.5
+#                                  loss = matrix(c(0, 0.5, 1, 0), nrow = 2)  
+#                     ),
+#                     control = rpart.control(minsplit = 15,  # Min 15 obs to split
+#                                             minbucket = 5,   # Min 7 obs in leaf
+#                                             # Complexity parameter
+#                                             cp = 0.001, # complex parameter
+#                                             maxdepth = 5))   # Max tree depth
+###
+# min.cp <- tree.model$cptable[which.min(tree.model$cptable[,"xerror"]),"CP"]
+
+# Prediction with three candidate models
+# pruned.tree.min <- prune(tree.model, cp = min.cp)
+# pred.label.min <- predict(pruned.tree.min, testData, type = "class") # default cutoff 0.5
+# pred.prob.min <- predict(pruned.tree.min, testData, type = "prob")[,2]
+pred.prob.bagg <- predict(final.bag.model, newdata = testData, type = "prob")[,2]
+##
+# ROC object
+# roc.tree.min <- roc(testData$Churn, pred.prob.min)
+roc.logit <- roc(testData$Churn, pred.logit)
+roc.bagg <- roc(testData$Churn, pred.prob.bagg)
+##
+##
+### Sen-Spe
+bagg.sen <- roc.bagg$sensitivities
+bagg.spe <- roc.bagg$specificities
+#
+# tree.min.sen <- roc.tree.min$sensitivities
+# tree.min.spe <- roc.tree.min$specificities
+#
+logit.sen <- roc.logit$sensitivities
+logit.spe <- roc.logit$specificities
+## AUC
+auc.bagg <- roc.bagg$auc
+# auc.tree.min <- roc.tree.min$auc
+auc.logit <- roc.logit$auc
+###
+plot(1-logit.spe, logit.sen,  
+     xlab = "1 - specificity",
+     ylab = "sensitivity",
+     col = "darkred",
+     type = "l",
+     lty = 1,
+     lwd = 1,
+     main = "ROC: Classification Models")
+lines(1-bagg.spe, bagg.sen, 
+      col = "blue",
+      lty = 1,
+      lwd = 1)
+lines(1-tree.min.spe, tree.min.sen,      
+      col = "orange",
+      lty = 1,
+      lwd = 1)
+abline(0,1, col = "skyblue3", lty = 2, lwd = 2)
+legend("bottomright", c("Logistic", "bagg", "Tree Min"),
+       lty = c(1,1,1), lwd = rep(1,3),
+       col = c("red", "blue", "orange"),
+       bty="n",cex = 0.8)
+## annotation - AUC
+text(0.8, 0.46, paste("Logistic AUC: ", round(auc.logit,4)), cex = 0.8)
+text(0.8, 0.4, paste("Bagg AUC: ", round(auc.bagg,4)), cex = 0.8)
+text(0.8, 0.34, paste("Tree Min AUC: ", round(auc.tree.min,4)), cex = 0.8)
+
+```
+
+In terms of model performance ranking, the logistic regression model is the best. BAGGING performs slightly worse than the base tree model.
+
+## Random Forest Classification 
+
+Implementing a random forest classification model begins with splitting the dataset into training and testing sets. Once the data is prepared, an initial random forest model is trained using default hyperparameters, such as the number of decision trees, maximum tree depth, and minimum samples required to split a node. The out-of-bag (OOB) error or cross-validation metrics like accuracy, precision, recall, and F1-score are used to assess the baseline performance. Feature importance analysis can also be conducted to identify the most influential predictors in the model.
+
+In this subsection, we will manually tune a Random Forest model using custom loops in R, evaluating different hyperparameter combinations on the Telco customer data set. Hyperparameter tuning is then performed to optimize model performance using techniques like grid search. Key hyperparameters will be tuned through 5-fold cross-validation is used to stabilize the AUCs and ensure to identification of the best hyperparameters the final random forest model is retrained on the full training set. The model’s performance is evaluated on the test set using metrics like accuracy, ROC-AUC, and a confusion matrix to assess classification effectiveness.
+
+### Multiple Hyperparameter Tuning
+
+We perform hyperparameter tuning through 5-fold cross-validation. As mentioned earlier, the key hyperparameters in random forest models are 
+
+* **mtry**: Number of variables randomly sampled as candidates at each split
+* **ntree**: Number of trees to grow
+* **nodesize**: Minimum size of terminal nodes
+* **maxnodes**: Maximum number of terminal nodes trees can have
+
+The performance metric used in the 5-fold cross-validation is the area under the ROC curve (AUC). For each combination of candidate hyperparameters, the model's performance will be evaluated based on the average AUC across all folds.
+
+```{r}
+
+# library(randomForest)
+# library(caret)
+# library(pROC)
+
+data <- na.omit(churn2)
+
+set.seed(123)
+train.idx <- createDataPartition(data$Churn, p = 0.7, list = FALSE)
+train.data <- data[train.idx, ]
+test.data <- data[-train.idx, ]
+
+train.data$Churn <- as.factor(train.data$Churn)
+# Set the positive class (if needed)
+train.data$Churn <- relevel(train.data$Churn, ref = "Yes")  # or "No"
+
+test.data$Churn <- as.factor(test.data$Churn)
+
+# Set the positive class (if needed)
+test.data$Churn <- relevel(test.data$Churn, ref = "Yes")  # or "No"
+
+# cross-validation setting
+k = 5
+train.size <- dim(train.data)[1]  # training data size
+fold.size <- floor(train.size/k)  # fold size
+
+##
+tune.grid <- expand.grid(
+  mtry = c(2, 3, 4, 5),
+  ntree = c(100, 300, 500),
+  nodesize = c(1, 3, 5, 10),
+  maxnodes = c(5, 10, 20, NULL)
+)
+### store hyperparameters and avg of cv AUC
+results <- data.frame()
+best.auc <- 0.5         # place-holder of AUC, 0.5 = random guess
+best.hyp.params <- list()   # update the hyperparameter list according to the best auc
+
+##
+for (i in 1:nrow(tune.grid)){
+  current.tune.params <- tune.grid[i, ]  # subset of DATA FRAME!! 
+  cv.auc <- rep(0,k)
+  ##
+  for (j in 1:k){
+    cv.id <- (1 + (j-1)*fold.size):(j*fold.size)
+    cv.train <- train.data[-cv.id, ]
+    cv.valid <- train.data[cv.id, ]
+    ##
+    rf.cv <- randomForest(
+      Churn ~ .,
+      data = cv.train,
+      mtry = current.tune.params$mtry,
+      ntree = current.tune.params$ntree,
+      nodesize = current.tune.params$nodesize,
+      maxnodes = current.tune.params$maxnodes)
+    ##
+    prob.cv <- predict(rf.cv, cv.valid, type = "prob")[, "Yes"]
+    cv.auc[j] <- auc(roc(cv.valid$Churn, prob.cv))
+  }
+  ##
+  # Average RMSE across folds
+  avg.auc <- mean(cv.auc)  
+  ##
+  # Store results: the data frame defined to store combinations of hyperparameters
+  # and the resulting mean RMSEs from cross-validation
+  results <- rbind(results, data.frame(
+    mtry = current.tune.params$mtry,
+    ntree = current.tune.params$ntree,
+    nodesize = current.tune.params$nodesize,
+    maxnodes = current.tune.params$maxnodes,
+    auc = avg.auc))
+  
+  # Update best parameters if current model is better
+  if(avg.auc > best.auc) {
+    best.auc <- avg.auc
+    best.hyp.params <- current.tune.params }
+  
+}
+pander(data.frame(cbind(best.hyp.params,best.auc)))    # resulting tuned hyperparameters
+
+```
+
+### Final Model Training and Evaluation
+
+With the above-tuned hyperparameters, we train the following random forest model. The confusion matrix's statistics, performance, and the AUC of test data is shown below.
+
+```{r}
+
+##
+final.rf.cls <- randomForest(
+  Churn ~ .,
+  data = train.data,
+  ntree = best.hyp.params$ntree,
+  mtry = best.hyp.params$mtry,
+  nodesize = best.hyp.params$nodesize,
+  maxnodes = current.tune.params$maxnodes,
+  importance = TRUE
+)
+
+test.pred <- predict(final.rf.cls, test.data)
+test.prob <- predict(final.rf.cls, test.data, type = "prob")
+rf.roc <- roc(test.data$Churn, test.prob[, "Yes"])
+test.auc <- auc(rf.roc)
+confusionMatrix(test.pred, test.data$Churn)
+test.auc
+
+
+```
+
+The variable importance is reflected in the two plots below.
+
+```{r}
+# Variable Importance
+varImpPlot(final.rf.cls, pch = 19, main = "Variable Importance of RF Classification" )
+
+```
+
+### Comparison to Competitors
+
+We now compare the random forest classification model with competitors including BAGGING, classification tree, and logistic regression models using global performance metric AUC.
+
+```{r}
+
+########################
+###  logistic regression
+logit.fit <- glm(Churn ~ ., data = train.data, family = binomial)
+AIC.logit <- step(logit.fit, direction = "both", trace = 0)
+pred.logit <- predict(AIC.logit, test.data, type = "response")
+
+# Build the initial classification tree
+# tree.model <- rpart(Churn ~ ., 
+#                     data = train.data,
+#                     method = "class",   # classification tree
+#                     parms = list(split = "gini",  # Using Gini index
+#                                  # FN cost = 1, FP cost = 0.5
+#                                  loss = matrix(c(0, 0.5, 1, 0), nrow = 2)  
+#                     ),
+#                     control = rpart.control(minsplit = 15,  # Min 15 obs to split
+#                                             minbucket = 5,   # Min 7 obs in leaf
+#                                             # Complexity parameter
+#                                             cp = 0.001, # complex parameter
+#                                             maxdepth = 5))   # Max tree depth
+# Find the optimal cp value that minimizes cross-validated error
+# min.cp <- tree.model$cptable[which.min(tree.model$cptable[,"xerror"]),"CP"]
+# pruned.tree.min <- prune(tree.model, cp = min.cp)
+
+
+# BAGGING
+# Create a grid of hyperparameter combinations
+hyper.grid <- expand.grid(
+  nbagg = c(25, 50, 100),
+  minsplit = c(5, 10, 20),
+  maxdepth = c(5, 10, 20),
+  cp = c(0.01, 0.001)
+)
+# Initialize a results dataframe
+results <- data.frame() # store values of tuned hyperparameters
+best.accuracy <- 0      # store accuracy
+best.params <- list()   # store best values of hyperparameter
+
+# Loop through each hyperparameter combination
+for(i in 1:nrow(hyper.grid)) {
+  # Get current hyperparameters
+  params <- hyper.grid[i, ]
+  
+  # Set rpart control parameters
+  rpart.control <- rpart.control(
+    minsplit = params$minsplit,
+    maxdepth = params$maxdepth,
+    cp = params$cp
+  )
+  
+  # Train bagging model
+  bag.model <- bagging(
+    Churn ~ .,
+    data = train.data,
+    nbagg = params$nbagg,
+    coob = TRUE,
+    control = rpart.control
+  )
+  
+  # Make predictions: default cut-off 0.5
+  preds <- predict(bag.model, newdata = test.data)
+  
+  # Calculate accuracy
+  cm <- confusionMatrix(preds, test.data$Churn)
+  accuracy <- cm$overall["Accuracy"]
+  
+  # Store results
+  results <- rbind(results, data.frame(
+    nbagg = params$nbagg,
+    minsplit = params$minsplit,
+    maxdepth = params$maxdepth,
+    cp = params$cp,
+    Accuracy = accuracy
+  ))
+  
+  # Update best parameters if current model is better
+  if(accuracy > best.accuracy) {
+    best.accuracy <- accuracy
+    best.params <- params
+  }
+}
+# Set rpart control with best parameters
+best.control <- rpart.control(
+  minsplit = best.params$minsplit,
+  maxdepth = best.params$maxdepth,
+  cp = best.params$cp
+)
+
+# Train final model
+final.bag.model <- bagging(
+  Churn ~ .,
+  data = train.data,
+  nbagg = best.params$nbagg,
+  coob = TRUE,
+  control = best.control
+)
+#pred.prob.bagg <- predict(final.bag.model, newdata = test.data, type = "prob")[,2]
+###
+# Prediction with three candidate models
+# pruned.tree.min <- prune(tree.model, cp = min.cp)
+# pred.label.min <- predict(pruned.tree.min, test.data, type = "class") # default cutoff 0.5
+# pred.prob.min <- predict(pruned.tree.min, test.data, type = "prob")[,2]
+pred.prob.bagg <- predict(final.bag.model, newdata = test.data, type = "prob")[,2]
+##
+# ROC object
+# roc.tree.min <- roc(test.data$Churn, pred.prob.min)
+roc.logit <- roc(test.data$Churn, pred.logit)
+roc.bagg <- roc(test.data$Churn, pred.prob.bagg)
+roc.rf <- roc(test.data$Churn, test.prob[, "Yes"])
+
+##
+##
+### Sen-Spe
+bagg.sen <- roc.bagg$sensitivities
+bagg.spe <- roc.bagg$specificities
+#
+# tree.min.sen <- roc.tree.min$sensitivities
+# tree.min.spe <- roc.tree.min$specificities
+#
+logit.sen <- roc.logit$sensitivities
+logit.spe <- roc.logit$specificities
+#
+rf.sen <- roc.rf$sensitivities
+rf.spe <- roc.rf$specificities
+
+## AUC
+auc.bagg <- roc.bagg$auc
+# auc.tree.min <- roc.tree.min$auc
+auc.logit <- roc.logit$auc
+auc.rf <- roc.rf$auc
+###
+###
+plot(1-logit.spe, logit.sen,  
+     xlab = "1 - specificity",
+     ylab = "sensitivity",
+     col = "darkred",
+     type = "l",
+     lty = 1,
+     lwd = 1,
+     main = "ROC: Classification Models")
+lines(1-bagg.spe, bagg.sen, 
+      col = "blue",
+      lty = 1,
+      lwd = 1)
+lines(1-tree.min.spe, tree.min.sen,      
+      col = "orange",
+      lty = 1,
+      lwd = 1)
+lines(1-rf.spe, rf.sen,      
+      col = "purple4",
+      lty = 1,
+      lwd = 1)
+abline(0,1, col = "skyblue3", lty = 2, lwd = 2)
+legend("bottomright", c("Logistic", "bagg", "Tree Min", "Random Forest"),
+       lty = c(1,1,1), lwd = rep(1,3),
+       col = c("red", "blue", "orange", "purple4"),
+       bty="n",cex = 0.8)
+## annotation - AUC
+text(0.8, 0.46, paste("Logistic AUC: ", round(auc.logit,4)), cex = 0.8)
+text(0.8, 0.4, paste("Bagg AUC: ", round(auc.bagg,4)), cex = 0.8)
+text(0.8, 0.34, paste("Tree Min AUC: ", round(auc.tree.min,4)), cex = 0.8)
+text(0.8, 0.28, paste("Forest AUC: ", round(auc.rf,4)), cex = 0.8)
+
+
+```
+
+We can see from the above ROC analysis that the logistic regression model has better predictive power than tree-based classification models. Among tree-based classification models, random forest are have better  predictive power than BAGGING, and both are better than the single classification tree model.
