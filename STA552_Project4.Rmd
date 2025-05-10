@@ -1,0 +1,1261 @@
+---
+title: "STA552 Project #4 Neural Networks for Regression and Classification"
+author: " Junjie (Jason) Mei"
+date: " 05/09/2025 "
+output:
+  html_document: 
+    toc: yes
+    toc_depth: 4
+    toc_float: yes
+    number_sections: yes
+    toc_collapsed: yes
+    code_folding: hide
+    code_download: yes
+    smooth_scroll: yes
+    theme: lumen
+  word_document: 
+    toc: yes
+    toc_depth: 4
+    fig_caption: yes
+    keep_md: yes
+  pdf_document: 
+    toc: yes
+    toc_depth: 4
+    fig_caption: yes
+    number_sections: no
+    fig_width: 3
+    fig_height: 3
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{=html}
+
+<style type="text/css">
+
+/* Cascading Style Sheets (CSS) is a stylesheet language used to describe the presentation of a document written in HTML or XML. it is a simple mechanism for adding style (e.g., fonts, colors, spacing) to Web documents. */
+
+h1.title {  /* Title - font specifications of the report title */
+  font-size: 22px;
+  font-weight: bold;
+  color: DarkRed;
+  text-align: center;
+  font-family: "Gill Sans", sans-serif;
+}
+h4.author { /* Header 4 - font specifications for authors  */
+  font-size: 18px;
+  font-weight: bold;
+  font-family: system-ui;
+  color: navy;
+  text-align: center;
+}
+h4.date { /* Header 4 - font specifications for the date  */
+  font-size: 18px;
+  font-family: system-ui;
+  color: DarkBlue;
+  text-align: center;
+  font-weight: bold;
+}
+h1 { /* Header 1 - font specifications for level 1 section title  */
+    font-size: 22px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: center;
+    font-weight: bold;
+}
+h2 { /* Header 2 - font specifications for level 2 section title */
+    font-size: 20px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: left;
+    font-weight: bold;
+}
+
+h3 { /* Header 3 - font specifications of level 3 section title  */
+    font-size: 18px;
+    font-family: "Times New Roman", Times, serif;
+    color: navy;
+    text-align: left;
+}
+
+h4 { /* Header 4 - font specifications of level 4 section title  */
+    font-size: 18px;
+    font-family: "Times New Roman", Times, serif;
+    color: darkred;
+    text-align: left;
+}
+
+body { background-color:white; }
+
+.highlightme { background-color:yellow; }
+
+p { background-color:white; }
+
+</style>
+```
+
+
+```{r setup, include=FALSE}
+# code chunk specifies whether the R code, warnings, and output 
+# will be included in the output files.
+if (!require("knitr")) {
+   install.packages("knitr")
+   library(knitr)
+}
+if (!require("tidyverse")) {
+   install.packages("tidyverse")
+library(tidyverse)
+}
+if (!require("ggplot2")) {
+   install.packages("ggplot2")
+   library(knitr)
+}
+if (!require("dplyr")) {
+   install.packages("dplyr")
+library(dplyr)
+}
+if (!require("VIM")) {
+   install.packages("VIM")
+   library(VIM)
+}
+if (!require("mice")) {
+   install.packages("mice")
+   library(mice)
+}
+
+## 
+knitr::opts_chunk$set(echo = TRUE,   # include code chunk in the output file
+                      warning = FALSE,# sometimes, you code may produce warning messages,
+                                      # you can choose to include the warning messages in
+                                      # the output file. 
+                      results = TRUE, # you can also decide whether to include the output
+                                      # in the output file.
+                      message = FALSE,
+                      comment = NA
+                      )  
+```
+
+
+#  Introduction
+
+This Telco Customer Churn dataset is the data from focused customer retention programs in a company called as Telco. This dataset can be used to predict behavior to retain customers. We can analyze all relevant customer data and develop focused customer retention programs. Each row represents a customer, each column contains customer’s attributes. The dataset includes information about: 1. Customers who left within the last month – the column is called Churn; 2. Services that each customer has signed up for – phone, multiple lines, internet, online security, online backup, device protection, tech support, and streaming TV and movies; 3. Customer account information – how long they’ve been a customer, contract, payment method, paperless billing, monthly charges, and total charges; 4.Demographic info about customers – gender, and if they have partners and dependents. 
+
+The total sample size is 7043 rows (customers). There are 21 variables, including 3 numerical variables and other categorical variables:
+
+ * customerID
+ * gender: Whether the customer is a male or a female
+ * SeniorCitizen: Whether the customer is a senior citizen or not (1, 0)
+ * Partner: Whether the customer has a partner or not (Yes, No)
+ * Dependents: Whether the customer has a partner or not (Yes, No)
+ * tenure: Number of months the customer has stayed with the company
+ * PhoneService: Whether the customer has a phone service or not (Yes, No)
+ * MultipleLines: Whether the customer has multiple lines or not (Yes, No, No phone service)
+ * InternetService: Customer’s internet service provider (DSL, Fiber optic, No)
+ * OnlineSecurity: Whether the customer has online security or not (Yes, No, No internet service)
+ * OnlineBackup: Whether the customer has online backup or not (Yes, No, No internet service)
+ * DeviceProtection: Whether the customer has device protection or not (Yes, No, No internet service)
+ * TechSupport: Whether the customer has tech support or not (Yes, No, No internet service)
+ * StreamingTV: Whether the customer has streaming TV or not (Yes, No, No internet service)
+ * StreamingMovies: Whether the customer has streaming movies or not (Yes, No, No internet service)
+ * categorical values: The contract term of the customer (Month-to-month, One year, Two year)
+ * PaperlessBilling: Whether the customer has paperless billing or not (Yes, No)
+ * PaymentMethod: The customer’s payment method (Electronic check, Mailed check, Bank transfer (automatic), Credit card (automatic))
+ * MonthlyCharges: The amount charged to the customer monthly
+ * TotalCharges: The total amount charged to the customer
+ * Churn: Whether the customer churned or not (Yes or No)
+
+Among these variables, only TotalCharges variable has 11 missing values, and all other variables have no missing values at all.
+
+#  Data Preparation
+
+##  Exploratory Data Analysis (EDA), Feature Engineering and Imputation
+
+We use this dataset to generate linear and non-linear regression models to predict customers' behavior to retain in this programs, and the numerical variable TotalCharges. To generate these models, first of all, we convert all categorical variables into dummy variables (only 0 and 1 values). For MultipleLines, OnlineSecurity, OnlineBackup, DeviceProtection, TechSupport, StreamingTV, StreamingMovies variables, "Yes" is converted to 1, "No" and "No phone service" or "No internet service" are converted to 0. Churn, PaperlessBilling, PhoneServices,  Partner, Dependents (Yes or No) are all converted to dummy variables (0 and 1 values). gender's Male is converted to 1, and female is 0. InternetServices (3 categorical values), PaymentMethod (4 categorical values) and Contract (3 categorical values) are converted to 3 (InternetServiceNo, InternetServiceDSL and InternetServiceFiberOptic),4 (PaymentMethodECheck, PaymentMethodMCheck, PaymentMethodCreditCard, PaymentMethodBankTranfer),and 3 (ContractMonth, Contract1Year, Contract2Year) dummy variables (only 0 and 1 values) respectively. 
+
+For 3 numerical variables, first of all, we compared the three numerical variables’ distribution and their mutual relationship with their Pairwise scatter Plots.
+
+```{r}
+# load Telco Customer Churn data
+# setwd("C:/Users/Junjie Mei/Desktop/WCU/2025Spring/STA552/Week2")
+churn <- read.csv("https://jm1006958.github.io/STA552/WA_Fn-UseC_-Telco-Customer-Churn.csv")
+
+# Convert "Yes" to 1 and "No" to 0
+churn$Partner1 <- ifelse(churn$Partner == "Yes", 1, 0)
+churn$Dependents1 <- ifelse(churn$Dependents == "Yes", 1, 0)
+churn$PhoneService1 <- ifelse(churn$PhoneService == "Yes", 1, 0)
+churn$MultipleLines1 <- ifelse(churn$MultipleLines == "Yes", 1, 0)
+churn$InternetService1 <- ifelse(churn$InternetService == "No", 0, 1)
+churn$OnlineSecurity1 <- ifelse(churn$OnlineSecurity == "Yes", 1, 0)
+churn$OnlineBackup1 <- ifelse(churn$OnlineBackup == "Yes", 1, 0)
+churn$DeviceProtection1 <- ifelse(churn$DeviceProtection == "Yes", 1, 0)
+churn$TechSupport1 <- ifelse(churn$TechSupport == "Yes", 1, 0)
+churn$StreamingTV1 <- ifelse(churn$StreamingTV == "Yes", 1, 0)
+churn$StreamingMovies1 <- ifelse(churn$StreamingMovies == "Yes", 1, 0)
+churn$PaperlessBilling1 <- ifelse(churn$PaperlessBilling == "Yes", 1, 0)
+churn$Churn1 <- ifelse(churn$Churn == "Yes", 1, 0)
+churn$InternetServiceNo <- ifelse(churn$InternetService == "No", 1, 0)
+churn$InternetServiceDSL <- ifelse(churn$InternetService == "DSL", 1, 0)
+churn$InternetServiceFiberOptic <- ifelse(churn$InternetService == "Fiber optic", 1, 0)
+churn$ContractMonth <- ifelse(churn$Contract == "Month-to-month", 1, 0)
+churn$Contract1Year <- ifelse(churn$Contract == "One year", 1, 0)
+churn$Contract2Year <- ifelse(churn$Contract == "Two year", 1, 0)
+churn$PaymentMethodECheck <- ifelse(churn$PaymentMethod == "Electronic check", 1, 0)
+churn$PaymentMethodMCheck <- ifelse(churn$PaymentMethod == "Mailed check", 1, 0)
+churn$PaymentMethodCreditCard <- ifelse(churn$PaymentMethod == "Credit card (automatic)", 1, 0)
+churn$PaymentMethodBankTranfer <- ifelse(churn$PaymentMethod == "Bank transfer (automatic)", 1, 0)
+churn$Churn1 <- ifelse(churn$Churn == "Yes", 1, 0)
+churn$gender1 <- ifelse(churn$gender == "Male", 1, 0)
+
+
+library(tidyverse)
+library(pander)
+
+par(mfrow = c(1,2))
+
+ggplot(churn, aes(x = tenure)) +
+  geom_histogram(aes(y = ..density..), bins = 20, fill = "steelblue", color = "black", alpha = 0.7) +
+  geom_density(color = "red", size = 1) +  # Overlay density plot
+  ggtitle("Distribution of tenure") +
+  xlab("tenure") +
+  ylab("Density") +
+  theme_minimal();
+
+ggplot(churn, aes(x = MonthlyCharges)) +
+  geom_histogram(aes(y = ..density..), bins = 20, fill = "steelblue", color = "black", alpha = 0.7) +
+  geom_density(color = "red", size = 1) +  # Overlay density plot
+  ggtitle("Distribution of MonthlyCharges") +
+  xlab("MonthlyCharges") +
+  ylab("Density") +
+  theme_minimal();
+
+ggplot(churn, aes(x = TotalCharges)) +
+  geom_histogram(aes(y = ..density..), bins = 20, fill = "steelblue", color = "black", alpha = 0.7) +
+  geom_density(color = "red", size = 1) +  # Overlay density plot
+  ggtitle("Distribution of TotalCharges") +
+  xlab("TotalCharges") +
+  ylab("Density") +
+  theme_minimal();
+
+#print(churn)
+pairs(churn[, c("tenure", "MonthlyCharges", "TotalCharges")], main = "Pairwise Plot of Selected Variables")
+
+```
+
+Since the TotalCharges variable has 11 missing values, for imputation purposes, we are trying  to find some association of TotalCharges with tenure and MonthlyCharges. From the above Pairwise Plots of these 3 numerical variables and that tenure is the Number of months the customer has stayed with the company, we created a new feature variable Prd_TotalCharges = tenure*MonthlyCharges, and re-do the pairwise plots of these numerical variables, and found that just as predicted, the Prd_TotalCharges variable is strongly and positively correlated with the TotalCharges variable. Therefore we used the Regression-based Imputation approach to imputate the 11 missing values in TotalCharges shown as below. 
+
+```{r}
+churn2 <- churn[, c("tenure", "MonthlyCharges", "TotalCharges", "Partner1", "Dependents1", "PhoneService1", "MultipleLines1", "InternetService1", "OnlineSecurity1", "SeniorCitizen",
+                    "OnlineBackup1", "DeviceProtection1", "TechSupport1",
+                    "StreamingTV1", "StreamingMovies1", "PaperlessBilling1",  "InternetServiceNo", "InternetServiceFiberOptic",
+                    "InternetServiceDSL", "ContractMonth", 
+                    "Contract1Year", "Contract2Year", "PaymentMethodECheck",
+                    "PaymentMethodMCheck", "PaymentMethodCreditCard", "PaymentMethodBankTranfer",
+                    "gender1", "Churn"   )]
+
+#churn2$log_TotalCharges <- log(churn2$TotalCharges)
+churn2$Prd_TotalCharges <- churn2$MonthlyCharges*churn2$tenure
+#churn2$Prd_TotalCharges <- NULL
+pairs(churn2[, c("tenure", "MonthlyCharges", "TotalCharges", "Prd_TotalCharges")], main = "Pairwise Plot of Selected Variables")
+
+#  Regression-based Imputation for Numerical Features
+
+pred.totalcharges = lm(TotalCharges ~ Prd_TotalCharges, data = churn2)
+newdata = churn2[is.na(churn2$TotalCharges),]
+pred.TotalCharges = predict(pred.totalcharges, newdata = newdata)
+m0 = sum(is.na(churn2$TotalCharges))  
+pred.resid = resid(pred.totalcharges)  
+pred.yrand = pred.TotalCharges + sample(pred.resid, m0, replace = TRUE)
+
+# Ensure no missing values in x-axis data
+#complete_cases <- !is.na(churn2$Prd_TotalCharges) & !is.na(churn2$TotalCharges)
+plot(churn2$Prd_TotalCharges, churn2$TotalCharges, main = "Prd_TotalCharges vs TotalCharges",col="yellow")
+
+abline(pred.totalcharges, col = "steelblue", lty = 2, lwd = 2)
+
+# Plot only for missing values
+if (m0 > 0) {
+  points(newdata$Prd_TotalCharges, pred.TotalCharges, pch=19, col = "red")
+  points(newdata$Prd_TotalCharges, pred.yrand, pch=19, col = "blue")
+}
+
+legend("topleft", c("regression imputation", "random regression imputation"),
+       col=c("red", "blue"), pch=rep(19,2), bty="n", cex = 0.8)
+
+churn2$TotalCharges[is.na(churn2$TotalCharges)] <- pred.yrand
+
+```
+
+From the Pairwise plot of TotalCharges and the feature variable Prd_TotalCharges, we could see the TotalCharges is perfectly in positively linear relationship with the interaction of tenure*MonthlyCharges, Prd_TotalCharges. In Project 2, we tested different linear and non-linear regression models in predicting TotalCharges with and without this feature variable Prd_TotalCharges. Without this Prd_TotalCharges, the linear models performs really bad, while RBF SVM, a non-linear regression model performs much better than several linear regression models. 
+
+
+Here in this project, we will use Perceptron Regression and Classification, and Multilayer Neural Networks, to predict TotalCharges with two numerical variables tenure and MonthlyCharges without the Prd_TotalCharges feature variable, and predict the dichotomous variable churn.
+
+
+# Part I: Predict TotalCharges with Perceptron Regression and Multilayer Neural Networks
+
+Based on the the analysis above in Project #2, in this project we  evaluate the performance of Perceptron Regression and Multilayer Neural Networks to predict TotalCharges with the predictor variable tenure and MonthlyCharges.
+
+## Perceptron Regression
+
+### Feature Encoding and Scaling
+
+**Data Splitting**: We use a two-way random split to create training (70%) and testing (30%) data sets. 
+
+
+```{r}
+# Load required libraries
+#library(MASS)  # For churn_lin  dataset
+#library(caret) # For data preprocessing
+
+# Load and prepare the data
+churn_lin <- churn2[,c("tenure", "MonthlyCharges", "TotalCharges")]
+
+set.seed(123)
+
+# Normalize data (0-1 range)
+normalize <- function(x) {
+  (x - min(x)) / (max(x) - min(x))
+}
+# normalize all features including the target variable
+churn_lin.scaled <- as.data.frame(lapply(churn_lin, normalize))
+
+# Train-test split (70-30)
+set.seed(123)
+##
+sample.size <- dim(churn_lin.scaled)[1]
+train.indices <- sample(1:sample.size, round(0.7*sample.size))
+##
+
+train.data.norm <- churn_lin.scaled[train.indices, ]
+test.data.norm <- churn_lin.scaled[-train.indices, ]
+##
+train.orig <- churn_lin[train.indices, ]
+test.orig <- churn_lin[-train.indices, ]
+
+```
+
+
+**Custom R Function for Perceptron Regression**
+
+Although perceptron regression models are implemented in several R libraries, we will use the explicit **weight update** formula introduced earlier. The following custom function implements this perceptron **weight update** rule.
+
+The stopping rule of the iterative weight updating is set to be $\text{relative error} \le 10^{-5}$.
+
+```{r}
+
+# Perceptron Regression Function
+perceptron.regression <- function(X, y, learning.rate = 0.01, epochs = 100) {
+  # Add bias term to features
+  X <- as.matrix(cbind(1, X))    # Make the design matrix (also called the model matrix)
+  
+  # Initialize weights (including bias)
+  weights <- rnorm(ncol(X), mean = 0, sd = 0.01)  # random initial values
+  
+  # Store errors for monitoring
+  errors <- numeric(epochs)   ## Zero vector to store errors from each epoch.
+  
+  # Training loop
+  for(epoch in 1:epochs) {   # run perceptron model on the same data 100 times
+    # with different random initial weights.
+    total.error <- 0         # initialize total error
+    
+    # Shuffle data each epoch
+    shuffle.index <- sample(nrow(X))   # shuffle records (permutation)
+    X.shuffled <- X[shuffle.index, ]   
+    y.shuffled <- y[shuffle.index]     
+    
+    #
+    for(i in 1:nrow(X.shuffled)) {
+      # Compute prediction (linear activation)
+      prediction <- sum(X.shuffled[i, ] * weights) 
+      
+      # Compute error
+      error <- y.shuffled[i] - prediction
+      #cat("\n  i = ", i, "Error: ", error)
+      total.error <- total.error + error^2
+      #cat("\n  i = ", i, " Total Error: ", total.error)
+      # Update weights:
+      weights <- weights + learning.rate * error * X.shuffled[i, ] 
+      # cat("\n bottom weight: ", weights)
+    }
+    #cat("\n bottom out weight: ", weights)
+    # Store mean squared error for this epoch
+    errors[epoch] <- total.error / nrow(X)    # MSE 
+    
+    # Early stopping if error doesn't improve much
+    if(epoch > 1 && abs(errors[epoch] - errors[epoch-1]) < 1e-5) {
+      # cat("Early stopping at epoch", epoch, "\n")
+      errors <- errors[1:epoch]
+      break
+    }
+  }
+  return(list(weights = weights, errors = errors, epoch = epoch))
+}
+
+```
+
+
+
+**Perceptron Training**
+
+**Perceptron training** is the process of estimating the weights of a perceptron model based on specified hyperparameters. The custom R function provided above accommodates two key hyperparameters: the **learning rate** and the **number of epochs**. This design allows the function to be used for **hyperparameter tuning**.
+
+For illustration, we train a perceptron with a learning rate of 0.01 and 200 epochs.
+```{r}
+# Prepare data for training
+X.train <- as.matrix(train.data.norm[, -which(names(train.data.norm) == "TotalCharges")])
+y.train <- train.data.norm$TotalCharges
+
+# Train the perceptron
+model <- perceptron.regression(X.train, y.train, learning.rate = 0.01, epochs = 200)
+
+# Plot training error over epochs
+plot(model$errors, type = "l", xlab = "Epoch", ylab = "Mean Squared Error", 
+     main = "Training Error over Epochs")
+##
+epoch <- length(model$errors)
+txt.loc.x <- epoch/2
+txt.loc.y <- (model$errors)[1]
+text(txt.loc.x, 0.95*txt.loc.y, paste("\n Iteration stopping at epoch", epoch, "\n"),
+     col = "red")
+
+```
+
+Since the weights were updated record by record based on a random vector of initial values for each epoch, the final updated weights of one epoch are used as the initial values for the next epoch. This process continues until the stopping rule - defined by the preset number of epochs and the relative errors of the estimated weights - is met. The figure above illustrates the iterative weight-updating process.
+
+
+**Perceptron Prediction**
+
+Once the perceptron weights were estimated, prediction became straightforward. Next, we use the scaled test data to make predictions and then reverse the scaling to obtain the actual predicted values in their original scales before evaluating the prediction performance. Recall that the reverse transformation to be used is in the following.
+
+$$
+y_{\text{orig.}} = \min\{y_{\text{orig.}}\} + y_{\text{new}} \left[\max\{y_{\text{orig.}}\} - \min\{y_{\text{orig.}}\}\right].
+$$
+
+
+```{r}
+
+# Prediction function
+predict.perceptron <- function(model, X) {
+  X <- as.matrix(cbind(1, X))
+  predictions <- X %*% model$weights
+  return(predictions)
+}
+
+# Prepare test data
+X.test <- as.matrix(test.data.norm[, -which(names(test.data.norm) == "TotalCharges")])
+
+# Make predictions
+predictions <- predict.perceptron(model, X.test)
+
+# Calculate test MSE
+test.mse <- mean((test.data.norm$TotalCharges - predictions)^2)
+#cat("Test MSE:", test.mse, "\n")
+
+# Convert predictions back to original scale
+predictions.original <- predictions * (max(test.orig$TotalCharges) - min(test.orig$TotalCharges)) + min(test.orig$TotalCharges)
+
+actual.original <- test.orig$TotalCharges
+
+# Calculate R-squared
+r.squared <- (cor(predictions.original,actual.original))^2
+
+
+#cat("R-squared:", r.squared, "\n")
+Perceptron.MSE <- mean((actual.original - predictions.original)^2)
+#cat("Perceptron MSE:", Perceptron.MSE, "\n")
+
+# Compare with linear regression for benchmarking
+lm.model <- lm(TotalCharges ~ ., data = train.orig)
+lm.pred <- predict(lm.model, test.orig)
+lm.mse <- mean((test.orig$TotalCharges - lm.pred)^2)
+#cat("Linear Regression MSE:", lm.mse, "\n")
+lm.r.sq <- summary(lm.model)$r.squared
+## 
+Perceptron <- c(Perceptron.MSE, r.squared)
+LM <- c(lm.mse, lm.r.sq)
+Performace.metrics <- data.frame(Perceptron=Perceptron, LM = LM )
+rownames(Performace.metrics) <- c("MSE", "r.sq")
+pander(Performace.metrics)
+
+
+
+```
+
+
+<font color = "red">**Relationship Between Common Performance Metrics**: **$R^2$** evaluates explanatory power, **MSE** measures prediction error, and the **slope** quantifies the relationship strength.</font>
+
+
+
+### R Library-based Approach
+
+Several R libraries have functions to implement neural network algorithms. This subsection uses the flexible **neuralnet** to implement **perceptron regression**.  Note that **neuralnet()** does not automatically handle missing values (NA). If the dataset contains missing values, we have to preprocess the data including imputation, numerical encoding, and scaling before training the model. 
+
+
+**Data Processing**
+
+Boston Housing Data has only numerical variables and has no missing values. We only rescale all variables. The **min-max** method is used in this numerical example. 
+
+$$
+x_{\text{new}} = \frac{x_{\text{orig.}} - \min\{x_{\text{orig.}}\}}{ \max\{x_{\text{orig.}}\} - \min\{x_{\text{orig.}}\}}.
+$$
+
+
+```{r}
+
+#install.packages("neuralnet")
+ library(neuralnet)
+library(MASS)  # For churn_lin dataset
+
+
+# Normalize data (0-1 range)
+normalize <- function(x) {
+  (x - min(x)) / (max(x) - min(x))
+}
+# normalize all features including the target variable
+churn_lin.scaled <- as.data.frame(lapply(churn_lin, normalize))
+
+
+# Train-test split (70-30)
+set.seed(123)
+##
+sample.size.nn <- dim(churn_lin.scaled)[1]
+train.indices.nn <- sample(1:sample.size.nn, round(0.7*sample.size.nn))
+##
+train.data.nn <- churn_lin.scaled[train.indices.nn, ]
+test.data.nn <- churn_lin.scaled[-train.indices.nn, ]
+##
+test.orig <- churn_lin[-train.indices.nn, ]  # needed to reverse scaling
+
+##
+# Unscale predictions and actual values
+unscale <- function(x, original) {
+  return(x * (max(original) - min(original)) + min(original))
+}
+
+
+```
+
+
+**Hyperparameter Tuning**
+
+The **neuralnet()** function supports various hyperparameters (arguments), some of which significantly influence the algorithm's performance. To demonstrate hyperparameter tuning via grid search, we focus on three key parameters to identify their optimal combination:
+
+* **Learning rate**: Controls the step size for weight updates during training.
+
+* **Threshold**: Determines the stopping criterion based on the partial derivatives of the error function.
+
+* **Stepmax**: Sets the maximum number of training steps; reaching this limit terminates the training process.
+
+```{r}
+# Define the tuning grid
+tune.grid.nn <- expand.grid(
+  learningrate = c(0.001, 0.01, 0.1, 0.5, 1),
+  threshold = c(0.01, 0.05, 0.1, 0.5),
+  stepmax = c(1e5, 1e6)  # Add stepmax to prevent infinite training
+)
+
+# Custom training function for neuralnet()
+neuralnet.train <- function(learningrate, threshold, stepmax) {
+  model <- neuralnet(
+    TotalCharges ~ .,
+    data = train.data.nn,
+    hidden = 0,  # Perceptron (no hidden layer)
+    linear.output = TRUE,  # For regression
+    learningrate = learningrate,
+    threshold = threshold,
+    stepmax = stepmax
+  )
+  # Calculate RMSE on training data
+  pred <- predict(model, train.data.nn[, -ncol(train.data.nn)])
+  
+  
+  rmse <- sqrt(mean((pred - train.data.nn$TotalCharges)^2))
+  return(rmse)
+}
+
+# Perform grid search:
+# using apply the () function to call neuralnet.train() using the components of the
+# row vector in the tune.grid.nn (data frame of combinations of hyperparameters).
+#
+results <- apply(tune.grid.nn, 1, function(x) {
+  neuralnet.train(x["learningrate"], x["threshold"], x["stepmax"])
+})
+
+##
+# Combine results with parameter combinations
+tune.results <- cbind(tune.grid.nn, RMSE = results)
+##
+pander(tune.results)
+
+```
+
+The best combination of hyperparameter values is given in the following table.
+```{r}
+# Find the best combination
+best.params <- tune.results[which.min(tune.results$RMSE), ]
+pander(best.params)
+
+```
+
+**Final Model Identification**
+
+With the above-identified optimal values of the hyperparameter, we next use them to train the final model for prediction.
+
+```{r}
+
+final.model.nn <- neuralnet(
+  TotalCharges ~ .,
+  data = train.data.nn,
+  hidden = 0,
+  linear.output = TRUE,
+  learningrate = best.params$learningrate,
+  threshold = best.params$threshold,
+  stepmax = best.params$stepmax,
+  rep = 1  # Multiple repetitions for stability
+)
+##
+
+```
+
+**Prediction and Evaluation**
+
+```{r}
+
+full.predictions <- predict(final.model.nn, test.data.nn)
+##
+pred.unscale <- unscale(full.predictions , churn_lin$TotalCharges)
+###
+MSE.neuralnet <- mean((pred.unscale  -test.orig$TotalCharges)^2)
+###
+r.sq.neuralnet <- (cor(pred.unscale, test.orig$TotalCharges))^2
+###
+Perceptron <- c(Perceptron.MSE, r.squared)
+LM <- c(lm.mse, lm.r.sq)
+neuralnet <- c(MSE.neuralnet, r.sq.neuralnet)
+Performace.metrics.all <- data.frame(Perceptron=Perceptron, 
+                                     LM = LM, 
+                                     neuralnet = neuralnet )
+rownames(Performace.metrics.all) <- c("MSE", "r.sq")
+pander(Performace.metrics.all)
+
+```
+
+
+As expected, the table above shows that the perceptron and classical least squares linear regression yielded the same results, since the two approaches are essentially identical.
+
+
+
+## Polynomial Perceptron Regression
+
+Polynomial regression can be implemented using a neural network with a single perceptron (neuron) by appropriately transforming the input features. That is, we cannot use a model formula to define the polynomial model explicitly.
+
+To illustrate the idea, we add two squared terms $\text{tenure}^2$ and $\text{MonthlyCharges}^2$ to the dataset to capture their curvilinear relationship with the target variable. 
+```{r}
+
+##
+churn_lin$tenure.sq <- (churn_lin$tenure)^2
+churn_lin$MonthlyCharges.sq <- (churn_lin$MonthlyCharges)^2
+
+# Normalize data (0-1 range)
+normalize <- function(x) {
+  (x - min(x)) / (max(x) - min(x))
+}
+
+# normalize all features including the target variable
+churn_lin.poly.scaled <- as.data.frame(lapply(churn_lin, normalize))
+
+##
+
+# Train-test split (70-30)
+set.seed(123)
+##
+sample.size.poly <- dim(churn_lin.poly.scaled)[1]
+train.indices.poly <- sample(1:sample.size.poly, round(0.7*sample.size.poly))
+##
+train.data.poly <- churn_lin.scaled[train.indices.poly, ]
+test.data.poly <- churn_lin.scaled[-train.indices.poly, ]
+##
+test.orig.poly <- churn_lin[-train.indices.poly, ]  # needed to reverse scaling
+train.orig.poly <- churn_lin[train.indices.poly, ]  # needed to reverse scaling
+##
+# Unscale predictions and actual values
+unscale <- function(x, original) {
+  return(x * (max(original) - min(original)) + min(original))
+}
+
+## Hyperparameter Tuning
+# Define the tuning grid
+tune.grid.poly <- expand.grid(
+  learningrate = c(0.001, 0.01, 0.1, 0.5, 1),
+  threshold = c(0.01, 0.05, 0.1, 0.5),
+  stepmax = c(1e5, 1e6)  # Add stepmax to prevent infinite training
+)
+
+# Custom training function for neuralnet()
+neuralnet.train.poly <- function(learningrate, threshold, stepmax) {
+  model <- neuralnet(
+    TotalCharges ~ .,
+    data = train.data.poly,
+    hidden = 0,  # Perceptron (no hidden layer)
+    linear.output = TRUE,  # For regression
+    learningrate = learningrate,
+    threshold = threshold,
+    stepmax = stepmax
+  )
+  # Calculate RMSE on training data
+  pred <- predict(model, train.data.poly[, -ncol(train.data.poly)])
+  
+  
+  rmse <- sqrt(mean((pred - train.data.poly$TotalCharges)^2))
+  return(rmse)
+}
+
+# Perform grid search:
+# using apply the () function to call neuralnet.train() using the components of the
+# row vector in the tune.grid.nn (data frame of combinations of hyperparameters).
+#
+results <- apply(tune.grid.poly, 1, function(x) {
+  neuralnet.train.poly(x["learningrate"], x["threshold"], x["stepmax"])
+})
+
+##
+# Combine results with parameter combinations
+tune.results.poly <- cbind(tune.grid.poly, RMSE = results)
+##
+#pander(tune.results.poly)
+
+# Find the best combination
+best.params.poly <- tune.results.poly[which.min(tune.results.poly$RMSE), ]
+#pander(best.params.poly)
+
+##
+final.model.poly <- neuralnet(
+  TotalCharges ~ .,
+  data = train.data.poly,
+  hidden = 0,
+  linear.output = TRUE,
+  learningrate = best.params.poly$learningrate,
+  threshold = best.params.poly$threshold,
+  stepmax = best.params.poly$stepmax,
+  rep = 1  # Multiple repetitions for stability
+)
+
+##
+full.predictions.poly <- predict(final.model.poly , test.data.poly )
+##
+pred.unscale.poly  <- unscale(full.predictions.poly  , test.orig$TotalCharges)
+###
+MSE.neuralnet.poly  <- mean((pred.unscale.poly   - test.orig$TotalCharges)^2)
+###
+r.sq.neuralnet.poly  <- (cor(pred.unscale.poly , test.orig$TotalCharges))^2
+##
+lm.poly <- lm(TotalCharges ~., data = train.orig.poly )
+pred.lm.poly <- predict(lm.poly, test.orig.poly[, -14])
+lm.mse.poly <- mean((pred.lm.poly - test.orig.poly$TotalCharges)^2)
+r.sq.lm.poly <- (cor(pred.lm.poly,test.orig.poly$TotalCharges))^2
+###
+Perceptron <- c(Perceptron.MSE, r.squared)
+LM <- c(lm.mse, lm.r.sq)
+neuralnet <- c(MSE.neuralnet, r.sq.neuralnet)
+neural.poly <- c(MSE.neuralnet.poly, r.sq.neuralnet.poly)
+
+Performace.metrics.all <- data.frame(Perceptron=Perceptron, 
+                                     LM = LM, 
+                                     neuralnet = neuralnet, 
+                                     neural.poly = neural.poly,
+                                     LM.poly = c(lm.mse.poly, r.sq.lm.poly))
+rownames(Performace.metrics.all) <- c("MSE", "r.sq")
+pander(Performace.metrics.all)
+
+```
+
+## MLP Regression
+This section focuses on implementing MLP regression using the Boston Housing dataset, along with the R neuralnet library and other supporting libraries for data preparation and visualization. We will follow the basic steps outlined in the previous section. We will fit one-hidden-layer and two-hidden-layer MLP to predict the median house value.
+
+We use min-max scaling method for all numerical variables. All features are numerical, no categorical encoding is needed. We use random splitting (70-30) to create training and testing data sets.
+
+```{r}
+
+# Load necessary libraries
+# library(neuralnet)
+# library(MASS)       # For churn_lin dataset
+# library(ggplot2)    # For visualization
+# library(caret)      # Only for data splitting (we won't use its modeling functions)
+# Load churn_lin dataset
+churn_lin$tenure.sq <- NULL
+churn_lin$MonthlyCharges.sq <- NULL
+
+# Check structure and summary
+# str(churn_lin)
+# summary(churn_lin)
+
+# Feature scaling - normalize all variables to [0,1] range
+normalize <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+
+churn_lin.scaled <- as.data.frame(lapply(churn_lin, normalize))
+
+# Set seed for reproducibility
+set.seed(123)
+N <- length(churn_lin.scaled$TotalCharges)
+# Create train-test split (70-30)
+train.reg.index <- sample(1:N,  floor(0.7*N), replace = FALSE)
+train.reg.data <- churn_lin.scaled[train.reg.index, ]
+test.reg.data <- churn_lin.scaled[-train.reg.index, ]
+
+# Check dimensions
+#dim(train_data)
+#dim(test_data)
+
+```
+
+### One-hidden-layer Perceptron
+
+We first build a single hidden layer perceptron model. We will tune three hyperparameters: the number of nodes in the hidden layer, learning rate, and activation function using grid search. The performance metric used to select the optimal combination of values of hyperparameters is RMSE.
+
+```{r}
+
+# Define grid of hyperparameters
+hyper.grid.reg <- expand.grid(
+  layer1 = c(5, 10, 15),
+  learning.rate = c(0.01, 0.1),
+  activation = c("logistic", "tanh")
+)
+
+# Initialize results storage
+rmse = NULL
+#layer1 = NULL
+#learningrate = NULL
+#activation = NULL
+
+best.reg.rmse <- Inf
+best.reg.model <- NULL
+
+# Perform grid search
+for(i in 1:nrow(hyper.grid.reg)) {
+  # Get current configuration
+  layer <- hyper.grid.reg$layer1[i]
+  lr <- hyper.grid.reg$learning.rate[i]
+  act <- hyper.grid.reg$activation[i]
+  
+  # Train model
+  set.seed(123)
+  model.reg <- neuralnet(
+    TotalCharges ~ .,
+    data = train.reg.data,
+    hidden = layer,
+    act.fct = act,
+    linear.output = TRUE,  # For regression
+    learningrate = lr,
+    algorithm = "rprop+",
+    stepmax = 1e5 )
+  
+  
+  # Make predictions
+  preds.reg <- predict(model.reg, test.reg.data[, -ncol(test.reg.data)])
+  
+  # Calculate RMSE
+  rmse.reg <- sqrt(mean((preds.reg - test.reg.data$TotalCharges)^2))
+  
+  # Store results
+  rmse[i] = rmse.reg
+  
+  # Update best model
+  if(rmse.reg < best.reg.rmse) {
+    best.reg.rmse <- rmse.reg
+    best.reg.model <- model.reg 
+    best.reg.params <- hyper.grid.reg[i, ]
+  }
+}
+
+results.regNN <- hyper.grid.reg
+results.regNN$rmse <- rmse
+
+
+# View results sorted by RMSE
+pander(results.regNN[order(results.regNN$rmse), ][1,])
+
+```
+
+With the above combination of optimal hyperparameter values, we train the final single hidden layer perceptron model.
+```{r}
+
+# Train the final model with best parameters
+final.reg.model <- neuralnet(
+  TotalCharges ~ .,
+  data = train.reg.data,
+  hidden = best.reg.params$layer1,
+  act.fct = best.reg.params$activation,
+  linear.output = TRUE,
+  learningrate = best.reg.params$learning_rate,
+  algorithm = "rprop+",
+  stepmax = 1e5
+)
+
+# Plot the neural network
+plot(final.reg.model)
+
+```
+
+The above NN plot shows the architecture of the final one-hidden-layer perceptron model. Next, we will use it to make predictions.
+```{r}
+# Make predictions on test set
+pred.NN1 <- predict(final.reg.model, test.reg.data[, -ncol(test.reg.data)])
+
+# Calculate performance metrics
+rmse.NN1 <- sqrt(mean((pred.NN1  - test.reg.data$TotalCharges)^2))
+mae.NN1 <- mean(abs(pred.NN1  - test.reg.data$TotalCharges))
+r.squared.NN1 <- cor(pred.NN1 , test.reg.data$TotalCharges)^2
+
+# cat("Performance Metrics:\n")
+# cat("RMSE:", rmse, "\n")
+# cat("MAE:", mae, "\n")
+# cat("R-squared:", r_squared, "\n")
+
+# Plot predictions vs actual
+plot.NN1.data <- data.frame(
+  Actual = test.reg.data$TotalCharges,
+  Predicted = pred.NN1 
+)
+
+ggplot(plot.NN1.data, aes(x = Actual, y = Predicted)) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, color = "darkred") +
+  annotate("text", x=0.85, y=.2, 
+           label=paste("R.sq =", round(r.squared.NN1,4)), color="blue") +
+  annotate("text", x=0.85, y=.13, 
+           label=paste("RMSE =", round(rmse.NN1,4)), color="blue") +
+  annotate("text", x=0.85, y=.06, 
+           label=paste("  MAE =", round(mae.NN1,4)), color="blue") +
+  ggtitle("Actual vs Predicted Values") +
+  theme_minimal()
+
+```
+
+The figure above demonstrates a strong correlation between the predicted target values and the scaled target values. Both the mean squared error (MSE) and mean absolute error (MAE) metrics are displayed on the plot. Next, we fit a classical linear regression model to the scaled data and perform a comparative analysis between this baseline linear regression and our neural network model.
+```{r}
+# library(ggplot2)
+# Train linear regression model
+lm.model <- lm(TotalCharges ~ ., data = test.reg.data)
+
+# Make predictions
+lm.predictions <- predict(lm.model, test.reg.data[, -ncol(test.reg.data)])
+
+# Calculate performance metrics
+lm.rmse <- sqrt(mean((lm.predictions - test.reg.data$TotalCharges)^2))
+lm.mae <- mean(abs(lm.predictions - test.reg.data$TotalCharges))
+lm.r.squared <- cor(lm.predictions, test.reg.data$TotalCharges)^2
+
+
+## improvements
+RMSE.imp <- round((lm.rmse - rmse.NN1)/lm.rmse * 100,2)
+MAE.imp <- round((lm.mae - mae.NN1)/lm.mae * 100, 2)
+Rsq.imp <- round((r.squared.NN1 - lm.r.squared)/lm.r.squared * 100,2)
+
+##
+Performance.table <- data.frame(
+  LM = c(lm.rmse, lm.mae, lm.r.squared),
+  NN.1 = c(rmse.NN1, mae.NN1, r.squared.NN1),
+  Improvement.percentage = c(RMSE.imp, MAE.imp, Rsq.imp)
+)
+rownames(Performance.table) <- c("RMSE", "MAE", "R.square")
+pander(Performance.table)
+
+```
+
+```{r}
+# Plot both predictions
+comparison.data <- data.frame(
+  Actual = test.reg.data$TotalCharges,
+  MLP = pred.NN1,
+  Linear = lm.predictions
+)
+
+ggplot(comparison.data) +
+  geom_point(aes(x = Actual, y = MLP, color = "MLP")) +
+  geom_point(aes(x = Actual, y = Linear, color = "Linear Regression")) +
+  geom_abline(intercept = 0, slope = 1, color = "black") +
+  scale_color_manual(values = c("MLP" = "blue", "Linear Regression" = "red")) +
+  labs(title = "Model Comparison: Actual vs Predicted",
+       x = "Actual Values",
+       y = "Predicted Values",
+       color = "Model Type") +
+  theme(
+    plot.margin = ggplot2::margin(40, 20, 20, 20, unit = "pt"),
+    plot.title = element_text(hjust = 0.5, 
+                              lineheight = 1.1,
+                              vjust = 10)
+  )
+
+```
+
+The above scatter plot of the true target values and predicted values based on the two models also shows that the one-hidden-perceptron model outperforms the classic linear regression model.
+
+
+### Two-hidden-layer Perceptron
+
+Since one hidden layer Perception regression model already almost perfectly predicted the actual value of TotalCharges, we will disregard the codes for Two-hidden-layer Perceptron regrssion model since the running seems to take forever to go through, although it's possible that a two-hidden-layer perception that has more complex architecture could improve the performance. The model-building process of Two-hidden-layer Perceptron is almost identical to the previous one-hidden-layer perceptron model. 
+\
+
+
+# Part II: Predict churn with Perceptron Classification and Multilayer Neural Networks
+
+Here we use 3 numerical variables (tenure, MonthlyCharges and TotalCharges) and other converted dummy variables To predict the probability of churn with Perceptron Classification and Multilayer Neural Networks.
+
+## Perceptron Classification
+
+### Feature Encoding and Scaling
+
+We use the **one-hot encoding** method to convert all categorical feature variables to numeric forms. Feature scaling uses the following.
+
+$$
+x_\text{new} = \frac{x_\text{original}-\text{mean}(x_\text{original})}{\text{std}(x_\text{original})}.
+$$
+
+Since this is a classification problem, we will not reverse the scaled feature variables to evaluate the model performance. We use a two-way random splitting approach to create training (70%) and testing (30%) datasets.
+
+Some feature variables contain a hyphen ("-") in their names. To avoid issues in defining the model formula, we will replace "-" with a period (".").
+
+```{r}
+# Load required libraries
+# library(neuralnet)
+# library(caret)
+# library(dplyr)
+# library(ggplot2)
+library(pROC)         # For ROC analysis
+
+# Load the dataset
+churn2 <- churn2[, c("tenure", "MonthlyCharges", "TotalCharges", "Partner1", "Dependents1", "PhoneService1", "MultipleLines1", "InternetService1", "OnlineSecurity1", "SeniorCitizen",
+                     "OnlineBackup1", "DeviceProtection1", "TechSupport1",
+                     "StreamingTV1", "StreamingMovies1", "PaperlessBilling1",  "InternetServiceNo", "InternetServiceFiberOptic",
+                     "InternetServiceDSL", "ContractMonth", 
+                     "Contract1Year", "Contract2Year", "PaymentMethodECheck",
+                     "PaymentMethodMCheck", "PaymentMethodCreditCard", "PaymentMethodBankTranfer",
+                     "gender1", "Churn"     )]
+
+# Split data into training (70%) and test (30%) sets
+
+# Check the structure
+# str(churn2)
+
+# Convert the target variable to binary (Yes=1, No=0)
+churn2$Churn <- ifelse(churn2$Churn == "Yes", 1, 0)
+
+
+# Scale numeric variables (excluding the target)
+numeric.cols <- sapply(churn2, is.numeric) & names(churn2) != "Churn"
+## by default, scale() takes 'z-score' transformation
+churn2[, numeric.cols] <- scale(churn2[, numeric.cols])
+
+# Check for missing values: since neuralnet() does not handle missing values
+#sum(is.na(churn2))
+###
+
+# Split data into training and testing sets
+set.seed(123)
+# sample size
+nn <- length(churn2$Churn)
+train.index.cls <- sample(1:nn, round(0.7*nn))   # random obs ID
+train.data.cls <- churn2[train.index.cls, ]
+test.data.cls <- churn2[-train.index.cls, ]
+
+##
+train.data.orig <- churn2[train.index.cls, ]
+test.data.orig <- churn2[-train.index.cls, ]
+
+```
+
+
+### Hyperparameter Tuning
+
+For a perceptron, the key hyperparameter is the **learning rate**. In the following tuning process, we will adjust this along with the stopping **threshold** for partial derivatives.
+
+During the tuning process, we perform **5-fold cross-validation** to obtain a stable accuracy score, using a default threshold of 0.5 (for the **sigmoid perceptron**). However, this default threshold is usually not optimal, meaning that keeping it at 0.5 may not lead to the optimal combination of values of the corresponding hyperparameters.
+```{r}
+# Hyperparameter tuning
+
+## Grid Search Setup
+# Define the hyperparameter grid
+hyper.grid.cls <- expand.grid(
+  learningrate = c(0.001, 0.01, 0.05, 0.1, 0.2),
+  threshold = c(0.01, 0.05)  # Stopping threshold for partial derivatives
+)
+
+# Create formula for neural network
+formula <- as.formula(paste("Churn ~", paste(names(train.data.cls)[!names(train.data.cls) %in% "Churn"], collapse = " + ")))
+
+# Set up 5-fold cross-validation: createFolds() returns a list of fold obs IDs
+# returnTrain = FALSE => no print out
+# folds <- createFolds(train.data.cls$y, k = 5, list = TRUE, returnTrain = FALSE)
+
+##
+
+k <- 5
+fold.size <- floor(dim(train.data.cls)[1]/k)
+# Initialize results storage
+results <- data.frame(
+  learningrate = numeric(),
+  threshold = numeric(),
+  accuracy = numeric(),
+  stringsAsFactors = FALSE
+)
+
+
+## Perform Grid Search with Cross-Validation
+for(i in 1:nrow(hyper.grid.cls)) {
+  lr <- hyper.grid.cls$learningrate[i]
+  th <- hyper.grid.cls$threshold[i]
+  
+  #cat("\nTesting combination", i, "of", nrow(hyper.grid.cls), ": learningrate =", lr, ", threshold =", th, "\n")
+  
+  # 
+  fold.accuracies <- numeric(k)
+  
+  # 
+  for(fold in 1:k) {
+    # Split into training and validation sets
+    valid.indices <- (1 + (fold-1)*fold.size):(fold*fold.size)
+    train.fold <- train.data.cls[-valid.indices, ]
+    valid.fold <- train.data.cls[valid.indices, ]
+    
+    # Train the perceptron
+    set.seed(123)
+    model.sigmoid <- neuralnet(
+      formula,
+      data = train.fold,
+      hidden = 0,  # Perceptron has no hidden layers
+      linear.output = FALSE,
+      learningrate = lr,
+      act.fct = "logistic",
+      algorithm = "rprop+", # The resilient backpropagation with weight backtracking
+      threshold = th,
+      stepmax = 1e5  # Increased to ensure convergence
+    )
+    
+    # Make predictions
+    preds <- predict(model.sigmoid, valid.fold)
+    pred.classes <- ifelse(preds > 0.5, 1, 0)  # default threshold 0.5
+    
+    # Calculate accuracy
+    fold.accuracies[fold] <- mean(pred.classes == valid.fold$Churn)
+  }
+  
+  # Store average accuracy for this hyperparameter combination
+  results <- rbind(results, data.frame(
+    learningrate = lr,
+    threshold = th,
+    accuracy = mean(fold.accuracies)
+  ))
+}
+
+## Analyze Results
+# Find the best combination
+best.combination <- results[which.max(results$accuracy), ]
+#cat("\nBest hyperparameter combination:\n")
+pander(best.combination)
+```
+
+
+With the above-identified 'optimal' combination of hyperparameters, we can train (i.e., estimate the weights of the model) the final perceptron model.
+
+
+### Training Final Model
+
+We use `neuralnet()` to train the final perceptron model with the tuned hyperparameters. To configure the model correctly, the following key arguments must be specified:
+
+* **Model formula**: The formula must include scaled numerical feature variables.
+
+* `hidden = 0`: This ensures the model is a perceptron (no hidden layers).
+
+* `linear.output = FALSE`: Required for classification tasks.
+
+* `act.fct =` : The activation function should be either `logistic` or `tanh` for classification.
+
+* `algorithm =`: Defines the weight-updating algorithm. The default is the backpropagation algorithm (`rprop`), but we use resilient `rprop+` for training the final model.
+
+
+
+```{r}
+## Train Final Model with Best Hyperparameters
+final.sigmoid.model <- neuralnet(
+  formula,
+  data = train.data.cls,
+  hidden = 0,
+  linear.output = FALSE,
+  learningrate = best.combination$learningrate,
+  threshold = best.combination$threshold,
+  act.fct = "logistic",
+  algorithm = "rprop+", # The resilient backpropagation with weight backtracking
+  stepmax = 1e5
+)
+# Plot the final model
+# plot(final.model)
+
+```
+
+
+The ROC curves below  show that the three candidate models perform similarly. This result is expected because they are essentially logistic regression models.
+
+
+
+We have discussed both perceptron regression and classification models in the previous sections, covering high-level technical explanations as well as practical applications with numerical examples.
+
+For perceptron regression with an identity activation function, the model is equivalent to linear regression. Since the perceptron regression algorithm computes a linear combination of input features before applying the activation function to produce outputs, fitting polynomial regression requires manually adding higher-order terms to the original dataset before preprocessing the data for the **perceptron model**. This same principle applies to perceptron classification.
+
+Given that the perceptron's architecture is too simplistic to capture complex relationships between target and feature variables, we will introduce a more advanced architecture in the next section: the **multilayer perceptron (MLP)**. This model incorporates **hidden layers with multiple nodes** and is commonly referred to as a **deep neural network** or simply **deep learning** algorithm.
+
+```{r}
+##
+## Evaluate on Test Set
+pred.sigmoid <- predict(final.sigmoid.model, test.data.cls)
+
+###  logistic regression
+logit.fit <- glm(Churn ~ ., data = train.data.cls, family = binomial)
+AIC.logit <- step(logit.fit, direction = "both", trace = 0)
+pred.logit <- predict(AIC.logit, test.data.cls, type = "response")
+pred.full <- predict(logit.fit, test.data.cls, type = "response")
+
+
+## roc
+roc.full.logit <- roc(test.data.cls[, ncol(test.data.cls)], pred.full)
+roc.AIC.logit <- roc(test.data.cls[, ncol(test.data.cls)], pred.logit)
+roc.sigmoid <- roc(test.data.cls[, ncol(test.data.cls)], pred.sigmoid )
+## AUC
+auc.sigmoid <- roc.sigmoid$auc
+auc.full.logit <- roc.full.logit$auc
+auc.AIC.logit <- roc.AIC.logit$auc
+
+## spe-sen
+sigmoid.spe <- roc.sigmoid$specificities
+sigmoid.sen <- roc.sigmoid$sensitivities
+
+full.logit.spe <- roc.full.logit$specificities
+full.logit.sen <- roc.full.logit$sensitivities
+
+AIC.logit.spe <- roc.AIC.logit$specificities
+AIC.logit.sen <- roc.AIC.logit$sensitivities
+
+
+# ROC curve
+plot(1-sigmoid.spe, sigmoid.sen, col = "blue", type = "l", lty = 1,
+     xlab = "1 - specificity",
+     ylab = "sensitivity",
+     main = "ROC Curves of Perceptron and Logistic Models")
+lines(1-full.logit.spe, full.logit.sen, lty = 1, col = "brown")
+lines(1-AIC.logit.spe, AIC.logit.sen, lty = 1, col = "steelblue")
+abline(0,1, lty =2, col = "red")
+text(0.98, 0.3, paste("Perceptron AUC = ", round(auc.sigmoid,4)), col = "blue", cex = 0.8, pos = 2)
+text(0.98, 0.25, paste("Full Logit AUC = ", round(auc.full.logit,4)), col = "brown", cex = 0.8, pos = 2)
+text(0.98, 0.2, paste("AIC AUC = ", round(auc.AIC.logit,4)), col = "steelblue", cex = 0.8, pos = 2)
+
+
+
+```
+
+The ROC curves above show that the three candidate models perform similarly. This result is expected because they are essentially logistic regression models.
+
+## MLP Classification
+
+So far my codes did not work out yet. 
